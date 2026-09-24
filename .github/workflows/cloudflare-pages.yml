@@ -65,6 +65,5 @@ jobs:
           npx wrangler@4 pages deploy flutter-app/build/web \
             --project-name=lexilingo-assistant \
             --branch=phase-1-english-assistant \
-            --ai AI \
             --commit-hash="$GITHUB_SHA" \
             --commit-message="English assistant preview"
