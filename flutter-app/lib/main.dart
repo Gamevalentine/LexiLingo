@@ -18,6 +18,7 @@ import 'package:lexilingo_app/core/services/firebase_messaging_service.dart';
 import 'package:lexilingo_app/core/services/app_navigation_service.dart';
 import 'package:lexilingo_app/core/services/notification_service.dart';
 import 'package:lexilingo_app/core/theme/app_theme.dart';
+import 'package:lexilingo_app/core/theme/app_tactile_theme.dart';
 import 'package:lexilingo_app/core/navigation/learner_route.dart';
 import 'package:lexilingo_app/core/di/injection_container.dart' as di;
 import 'package:lexilingo_app/core/network/api_config.dart';
@@ -402,7 +403,9 @@ class _LexiLingoAppState extends State<LexiLingoApp>
             locale: context.locale,
             supportedLocales: context.supportedLocales,
             localizationsDelegates: context.localizationDelegates,
-            home: kIsWeb ? const MainScreen() : const AuthWrapper(),
+            home: kIsWeb
+                ? const LearnerTheme(child: MainScreen())
+                : const AuthWrapper(),
             routes: {
               '/youtube': LearnerRoute.builder(
                 (context) => const YouTubeExploreScreen(),
