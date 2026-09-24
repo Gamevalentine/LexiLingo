@@ -31,6 +31,15 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
     defaults:
       run:
@@ -42,7 +51,7 @@ jobs:
       SECRET_KEY: smoke-secret-key-only-for-ci-0123456789
       APP_ENV: development
       DEBUG: "false"
-      REDIS_URL: ""
+      REDIS_URL: redis://127.0.0.1:6379/0
       ENABLE_APP_CORS: "true"
       ALLOWED_ORIGINS: http://localhost:8080
       ALLOWED_HOSTS: '["localhost","127.0.0.1"]'
