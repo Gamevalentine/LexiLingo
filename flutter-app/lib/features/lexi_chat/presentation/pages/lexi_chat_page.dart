@@ -30,7 +30,9 @@ import 'package:lexilingo_app/features/voice/data/datasources/speech_recognition
 ///  - Free-form conversation focused on natural English practice
 ///  - Dark/light theme support
 class LexiChatPage extends StatefulWidget {
-  const LexiChatPage({super.key});
+  final String? initialPrompt;
+
+  const LexiChatPage({super.key, this.initialPrompt});
 
   @override
   State<LexiChatPage> createState() => _LexiChatPageState();
@@ -66,6 +68,8 @@ class _LexiChatPageState extends State<LexiChatPage>
       _isDuplexVoiceActive;
 
   int _lastMessageCount = 0;
+  bool _initialPromptApplied = false;
+
   List<String> get _quickReplies => [
     'lexiChat.quickReply1'.tr(),
     'lexiChat.quickReply2'.tr(),
@@ -81,6 +85,7 @@ class _LexiChatPageState extends State<LexiChatPage>
       provider.syncTtsWithGlobalSound(
         context.read<SettingsProvider>().soundEnabled,
       );
+      _applyInitialPrompt();
       unawaited(
         provider.restoreLatestSession(_userId).catchError((Object error) {
           debugPrint('restoreLatestSession failed: $error');
@@ -112,6 +117,17 @@ class _LexiChatPageState extends State<LexiChatPage>
 
   String get _nativeLanguage =>
       LocaleService.normalizeLanguageCode(context.locale.languageCode);
+
+  void _applyInitialPrompt() {
+    if (_initialPromptApplied) return;
+    final prompt = widget.initialPrompt?.trim();
+    if (prompt == null || prompt.isEmpty) return;
+
+    _initialPromptApplied = true;
+    _controller.text = prompt;
+    _controller.selection = TextSelection.collapsed(offset: prompt.length);
+    _focusNode.requestFocus();
+  }
 
   @override
   void dispose() {
@@ -737,40 +753,154 @@ class _LexiChatPageState extends State<LexiChatPage>
             .toList(growable: false);
         final isResponding = provider.isLexiResponding;
 
+        final showStarter =
+            messages.length == 1 &&
+            messages.first.id == 'greeting' &&
+            !isResponding;
+
         return ListView.builder(
           controller: _scrollController,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          itemCount: messages.length + (isResponding ? 1 : 0),
+          itemCount:
+              messages.length +
+              (showStarter ? 1 : 0) +
+              (isResponding ? 1 : 0),
           itemBuilder: (context, index) {
-            // Typing indicator at the end
-            if (index == messages.length && isResponding) {
+            if (index < messages.length) {
+              final message = messages[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: LexiTypingIndicator(isThinking: provider.isLexiThinking),
+                child: LexiDialogueBubble(
+                  message: message,
+                  onPlayAudio: message.hasAudio
+                      ? () => provider.replayAudio(message)
+                      : null,
+                  onShowCorrections:
+                      (message.hasCorrections ||
+                          message.nativeHint != null ||
+                          message.linkedConcepts.isNotEmpty)
+                      ? () => LexiCorrectionsSheet.show(context, message)
+                      : null,
+                  onSuggestedPracticeTap: (practice) =>
+                      _sendQuickReply(practice.prompt),
+                ),
               );
             }
 
-            final message = messages[index];
+            if (showStarter && index == messages.length) {
+              return _buildAssistantStarter(isDark);
+            }
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: LexiDialogueBubble(
-                message: message,
-                onPlayAudio: message.hasAudio
-                    ? () => provider.replayAudio(message)
-                    : null,
-                onShowCorrections:
-                    (message.hasCorrections ||
-                        message.nativeHint != null ||
-                        message.linkedConcepts.isNotEmpty)
-                    ? () => LexiCorrectionsSheet.show(context, message)
-                    : null,
-                onSuggestedPracticeTap: (practice) =>
-                    _sendQuickReply(practice.prompt),
-              ),
+              child: LexiTypingIndicator(isThinking: provider.isLexiThinking),
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildAssistantStarter(bool isDark) {
+    final primary = AppColorRoles.primary(isDark);
+    final secondary = AppColorRoles.textSecondary(isDark);
+
+    final actions = <({IconData icon, String label, String prompt})>[
+      (
+        icon: Icons.route_rounded,
+        label: 'lexiChat.starterPlan'.tr(),
+        prompt: 'lexiChat.starterPlanPrompt'.tr(),
+      ),
+      (
+        icon: Icons.forum_rounded,
+        label: 'lexiChat.starterConversation'.tr(),
+        prompt: 'lexiChat.starterConversationPrompt'.tr(),
+      ),
+      (
+        icon: Icons.fact_check_rounded,
+        label: 'lexiChat.starterCorrection'.tr(),
+        prompt: 'lexiChat.starterCorrectionPrompt'.tr(),
+      ),
+      (
+        icon: Icons.style_rounded,
+        label: 'lexiChat.starterVocabulary'.tr(),
+        prompt: 'lexiChat.starterVocabularyPrompt'.tr(),
+      ),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.surfaceDark.withValues(alpha: 0.82)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: primary.withValues(alpha: isDark ? 0.28 : 0.14),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'lexiChat.starterTitle'.tr(),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'lexiChat.starterSubtitle'.tr(),
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: secondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...actions.map(
+            (action) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Material(
+                color: primary.withValues(alpha: isDark ? 0.08 : 0.045),
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  onTap: () => _sendQuickReply(action.prompt),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(action.icon, size: 20, color: primary),
+                        const SizedBox(width: 11),
+                        Expanded(
+                          child: Text(
+                            action.label,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 14,
+                          color: secondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
