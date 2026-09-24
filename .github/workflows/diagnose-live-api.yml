@@ -111,3 +111,22 @@ jobs:
           head -c 2000 /tmp/body.txt
           echo
           echo
+
+
+          echo "===== Deployed bootstrap/service worker diagnostics ====="
+          curl -sS --max-time 20 "https://lexilingo-assistant.pages.dev/flutter_bootstrap.js" -o /tmp/bootstrap.js
+          echo "-- flutter_bootstrap.js service worker refs --"
+          grep -n -E 'serviceWorker|flutter_service_worker|main.dart.js' /tmp/bootstrap.js | head -40 || true
+
+          curl -sS --max-time 20 "https://lexilingo-assistant.pages.dev/flutter_service_worker.js" -o /tmp/sw.js
+          echo "-- flutter_service_worker.js first lines --"
+          head -40 /tmp/sw.js || true
+
+          curl -sS --max-time 30 "https://lexilingo-assistant.pages.dev/main.dart.js" -o /tmp/main.dart.js
+          echo "-- URL strings in deployed main.dart.js --"
+          printf "pages.dev occurrences: "
+          grep -o 'lexilingo-assistant\.pages\.dev' /tmp/main.dart.js | wc -l || true
+          printf "api.lexilingo.me occurrences: "
+          grep -o 'api\.lexilingo\.me' /tmp/main.dart.js | wc -l || true
+          echo "-- nearby URL snippets --"
+          grep -o -E '.{0,120}(lexilingo-assistant\.pages\.dev|api\.lexilingo\.me).{0,180}' /tmp/main.dart.js | head -20 || true
