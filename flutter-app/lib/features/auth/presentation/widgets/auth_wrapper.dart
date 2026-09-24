@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:lexilingo_app/core/widgets/widgets.dart';
@@ -245,6 +246,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    // Public web preview: enter the learning app directly with a guest session.
+    // Authentication, registration and onboarding remain available in source
+    // for native/future builds, but they do not gate the Cloudflare web app.
+    if (kIsWeb) {
+      return const LearnerTheme(child: MainScreen());
+    }
+
     final authProvider = Provider.of<AuthProvider>(context);
 
     // Show loading while checking auth state
