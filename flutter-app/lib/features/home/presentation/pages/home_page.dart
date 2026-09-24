@@ -23,6 +23,7 @@ import 'package:lexilingo_app/features/games/presentation/widgets/level_up_dialo
 import 'package:lexilingo_app/features/gamification/presentation/widgets/rank_up_dialog.dart';
 import 'package:lexilingo_app/features/vocabulary/presentation/widgets/word_of_day_card.dart';
 import 'package:lexilingo_app/features/gamification/presentation/widgets/active_boosts_bar.dart';
+import 'package:lexilingo_app/features/home/presentation/widgets/home_page/assistant_start_card.dart';
 
 class HomePageNew extends StatefulWidget {
   const HomePageNew({super.key});
