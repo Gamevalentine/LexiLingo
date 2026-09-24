@@ -44,12 +44,10 @@ class _HomePageNewState extends State<HomePageNew> {
     // Load home data after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final homeProvider = context.read<HomeProvider>();
-      final authProvider = context.read<AuthProvider>();
 
-      // Web guest mode must render immediately. The original home bootstrap
-      // waits on several backend requests; when the API is unavailable those
-      // requests keep the whole page in the full-screen skeleton state.
-      if (kIsWeb && !authProvider.isAuthenticated) {
+      // The public web build is guest-first and must never depend on the
+      // unavailable legacy backend during initial render.
+      if (kIsWeb) {
         return;
       }
 
@@ -144,12 +142,13 @@ class _HomePageNewState extends State<HomePageNew> {
       body: SafeArea(
         child: Consumer3<HomeProvider, UserProvider, AuthProvider>(
           builder: (context, homeProvider, userProvider, authProvider, child) {
-            if (homeProvider.isLoading &&
+            if (!kIsWeb &&
+                homeProvider.isLoading &&
                 homeProvider.featuredCourses.isEmpty) {
               return const HomeSkeletonLoading();
             }
 
-            if (homeProvider.errorMessage != null) {
+            if (!kIsWeb && homeProvider.errorMessage != null) {
               return ErrorDisplayWidget.fromMessage(
                 message: homeProvider.errorMessage!,
                 onRetry: () => homeProvider.loadHomeData(),
