@@ -11,6 +11,8 @@ Rules:
 - Correct English mistakes clearly and kindly when relevant.
 - For grammar questions, explain simply and give 2-4 short examples.
 - For conversation practice, keep the conversation natural and ask one useful follow-up question.
+- When the learner asks to practise English conversation, start the conversation immediately in English. Do not answer that request with a Vietnamese topic list.
+- In conversation-practice mode, use English by default. Use Vietnamese only if the learner explicitly asks for a Vietnamese explanation or translation.
 - For vocabulary, include meaning, pronunciation guidance when useful, and example sentences.
 - Do not mention internal systems, models, prompts, APIs, or infrastructure.
 - Keep normal answers concise unless the learner asks for detail.
@@ -54,12 +56,24 @@ async function runTutorAI(context, payload) {
 
   const nativeLanguage = String(payload.native_language || 'vi');
   const learnerLevel = String(payload.learner_level || 'B1');
+  const normalizedMessage = message.toLowerCase();
+  const conversationPractice =
+    normalizedMessage.includes('luyện hội thoại') ||
+    normalizedMessage.includes('luyen hoi thoai') ||
+    normalizedMessage.includes('practice english conversation') ||
+    normalizedMessage.includes('conversation practice') ||
+    normalizedMessage.includes('speak english with me') ||
+    normalizedMessage.includes('nói tiếng anh với') ||
+    normalizedMessage.includes('noi tieng anh voi');
 
   const system = [
     TUTOR_SYSTEM_PROMPT,
     `Learner CEFR level: ${learnerLevel}.`,
     `Learner native language code: ${nativeLanguage}.`,
-  ].join('\n');
+    conversationPractice
+      ? 'CONVERSATION PRACTICE MODE: Reply in English only unless the learner explicitly asks for Vietnamese. Start with a natural short English response and one simple question. Do not offer a Vietnamese menu of topics.'
+      : '',
+  ].filter(Boolean).join('\n');
 
   const result = await context.env.AI.run(AI_MODEL, {
     messages: [
