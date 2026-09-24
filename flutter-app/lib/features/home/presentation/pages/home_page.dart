@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:lexilingo_app/core/widgets/widgets.dart';
 import 'package:lexilingo_app/features/home/presentation/providers/home_provider.dart';
@@ -43,6 +44,15 @@ class _HomePageNewState extends State<HomePageNew> {
     // Load home data after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final homeProvider = context.read<HomeProvider>();
+      final authProvider = context.read<AuthProvider>();
+
+      // Web guest mode must render immediately. The original home bootstrap
+      // waits on several backend requests; when the API is unavailable those
+      // requests keep the whole page in the full-screen skeleton state.
+      if (kIsWeb && !authProvider.isAuthenticated) {
+        return;
+      }
+
       // Capture LevelProvider reference HERE (synchronously), before any
       // async gap, and store as a field so dispose() can safely remove the
       // listener without touching context.
