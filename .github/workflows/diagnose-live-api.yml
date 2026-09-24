@@ -1,0 +1,87 @@
+name: Diagnose live LexiLingo API path
+
+on:
+  push:
+    branches:
+      - phase-1-english-assistant
+    paths:
+      - .github/workflows/diagnose-live-api.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe live frontend, proxy and upstream
+        shell: bash
+        run: |
+          set +e
+
+          probe_get() {
+            label="$1"
+            url="$2"
+            echo "===== $label ====="
+            curl -sS --max-time 20 \
+              -D /tmp/headers.txt \
+              -o /tmp/body.txt \
+              -w 'HTTP=%{http_code} TIME=%{time_total}s\n' \
+              "$url"
+            echo "--- headers ---"
+            sed -n '1,30p' /tmp/headers.txt
+            echo "--- body ---"
+            head -c 1200 /tmp/body.txt
+            echo
+            echo
+          }
+
+          probe_options() {
+            label="$1"
+            url="$2"
+            echo "===== $label ====="
+            curl -sS --max-time 20 -X OPTIONS \
+              -H 'Origin: https://lexilingo-assistant.pages.dev' \
+              -H 'Access-Control-Request-Method: POST' \
+              -H 'Access-Control-Request-Headers: content-type' \
+              -D /tmp/headers.txt \
+              -o /tmp/body.txt \
+              -w 'HTTP=%{http_code} TIME=%{time_total}s\n' \
+              "$url"
+            echo "--- headers ---"
+            sed -n '1,40p' /tmp/headers.txt
+            echo "--- body ---"
+            head -c 1200 /tmp/body.txt
+            echo
+            echo
+          }
+
+          probe_post_invalid() {
+            label="$1"
+            url="$2"
+            echo "===== $label ====="
+            curl -sS --max-time 25 -X POST \
+              -H 'Content-Type: application/json' \
+              --data '{}' \
+              -D /tmp/headers.txt \
+              -o /tmp/body.txt \
+              -w 'HTTP=%{http_code} TIME=%{time_total}s\n' \
+              "$url"
+            echo "--- headers ---"
+            sed -n '1,40p' /tmp/headers.txt
+            echo "--- body ---"
+            head -c 2000 /tmp/body.txt
+            echo
+            echo
+          }
+
+          probe_get "Pages root" "https://lexilingo-assistant.pages.dev/"
+          probe_get "Pages deployed prod_config" "https://lexilingo-assistant.pages.dev/assets/assets/env/prod_config"
+          probe_get "Pages proxy health" "https://lexilingo-assistant.pages.dev/api/v1/health"
+          probe_get "Upstream health" "https://api.lexilingo.me/api/v1/health"
+          probe_options "Pages proxy register preflight" "https://lexilingo-assistant.pages.dev/api/v1/auth/register"
+          probe_options "Upstream register preflight from Pages origin" "https://api.lexilingo.me/api/v1/auth/register"
+          probe_post_invalid "Pages proxy register malformed request" "https://lexilingo-assistant.pages.dev/api/v1/auth/register"
+          probe_post_invalid "Upstream register malformed request" "https://api.lexilingo.me/api/v1/auth/register"
