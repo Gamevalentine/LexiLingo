@@ -333,10 +333,18 @@ class _LexiLingoAppState extends State<LexiLingoApp>
           create: (_) => di.sl<TtsSettingsProvider>()..init(),
         ),
         ChangeNotifierProvider(
-          create: (_) => di.sl<StreakProvider>()..loadStreak(),
+          create: (_) {
+            final p = di.sl<StreakProvider>();
+            if (!kIsWeb) p.loadStreak();
+            return p;
+          },
         ),
         ChangeNotifierProvider(
-          create: (_) => di.sl<DailyChallengesProvider>()..loadChallenges(),
+          create: (_) {
+            final p = di.sl<DailyChallengesProvider>();
+            if (!kIsWeb) p.loadChallenges();
+            return p;
+          },
         ),
         ChangeNotifierProvider(create: (_) => di.sl<AchievementProvider>()),
         ChangeNotifierProvider(create: (_) => di.sl<NotificationProvider>()),
