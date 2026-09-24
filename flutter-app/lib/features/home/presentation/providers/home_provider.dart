@@ -102,6 +102,7 @@ class HomeProvider with ChangeNotifier {
 
   /// Load weekly progress for home screen chart (Task 1.3)
   Future<void> loadWeeklyProgress() async {
+    if (kIsWeb) return;
     if (getWeeklyProgressUseCase == null) return;
 
     _isLoadingWeekly = true;
@@ -125,6 +126,11 @@ class HomeProvider with ChangeNotifier {
 
   /// Load featured courses for home screen
   Future<void> loadFeaturedCourses() async {
+    if (kIsWeb) {
+      _isLoadingCourses = false;
+      _coursesError = null;
+      return;
+    }
     _isLoadingCourses = true;
     _coursesError = null;
     notifyListeners();
@@ -151,6 +157,11 @@ class HomeProvider with ChangeNotifier {
 
   /// Load enrolled courses for "Continue Learning" section
   Future<void> loadEnrolledCourses() async {
+    if (kIsWeb) {
+      _isLoadingEnrolled = false;
+      _enrolledError = null;
+      return;
+    }
     _isLoadingEnrolled = true;
     _enrolledError = null;
     notifyListeners();
@@ -234,6 +245,7 @@ class HomeProvider with ChangeNotifier {
 
   /// Refresh all home screen data
   Future<void> refreshData() async {
+    if (kIsWeb) return;
     await Future.wait([
       loadFeaturedCourses(),
       loadEnrolledCourses(),
@@ -244,6 +256,7 @@ class HomeProvider with ChangeNotifier {
   }
 
   Future<void> loadWordOfDay() async {
+    if (kIsWeb) return;
     if (vocabularyRepository == null) return;
     _isLoadingWordOfDay = true;
     notifyListeners();
@@ -258,6 +271,7 @@ class HomeProvider with ChangeNotifier {
 
   /// Load home data (combines courses and dashboard)
   Future<void> loadHomeData() async {
+    if (kIsWeb) return;
     await Future.wait([
       loadFeaturedCourses(),
       loadEnrolledCourses(),
