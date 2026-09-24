@@ -1,0 +1,43 @@
+name: Diagnose LexiLingo Render origin
+
+on:
+  push:
+    branches:
+      - phase-1-english-assistant
+    paths:
+      - .github/workflows/diagnose-render-origin.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe Render backend origin only
+        shell: bash
+        run: |
+          set +e
+
+          probe() {
+            label="$1"
+            method="$2"
+            url="$3"
+            echo "===== $label ====="
+            if [ "$method" = "GET" ]; then
+              curl -sS --max-time 30 -D /tmp/h -o /tmp/b -w 'HTTP=%{http_code} TIME=%{time_total}s\n' "$url"
+            else
+              curl -sS --max-time 30 -X POST -H 'Content-Type: application/json' --data '{}' -D /tmp/h -o /tmp/b -w 'HTTP=%{http_code} TIME=%{time_total}s\n' "$url"
+            fi
+            sed -n '1,40p' /tmp/h
+            echo "--- body ---"
+            head -c 2000 /tmp/b
+            echo
+            echo
+          }
+
+          probe "Render root health" GET "https://lexilingo-backend.onrender.com/health"
+          probe "Render v1 health" GET "https://lexilingo-backend.onrender.com/api/v1/health"
+          probe "Render malformed register" POST "https://lexilingo-backend.onrender.com/api/v1/auth/register"
