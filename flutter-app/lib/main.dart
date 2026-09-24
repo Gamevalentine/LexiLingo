@@ -486,7 +486,14 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                 (context) => const BookLibraryScreen(),
               ),
               // Phase 6: Lexi Chat
-              '/lexi': LearnerRoute.builder((context) => const LexiChatPage()),
+              '/lexi': LearnerRoute.builder((context) {
+                final args = ModalRoute.of(context)?.settings.arguments;
+                String? starterPrompt;
+                if (args is Map<String, dynamic>) {
+                  starterPrompt = args['starterPrompt'] as String?;
+                }
+                return LexiChatPage(initialPrompt: starterPrompt);
+              }),
               '/reset-password': (context) {
                 final args = ModalRoute.of(context)?.settings.arguments;
                 String? token;
