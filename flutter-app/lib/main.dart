@@ -394,9 +394,7 @@ class _LexiLingoAppState extends State<LexiLingoApp>
             locale: context.locale,
             supportedLocales: context.supportedLocales,
             localizationsDelegates: context.localizationDelegates,
-            home: kIsWeb
-                ? const LearnerTheme(child: MainScreen())
-                : const AuthWrapper(),
+            home: kIsWeb ? const MainScreen() : const AuthWrapper(),
             routes: {
               '/youtube': LearnerRoute.builder(
                 (context) => const YouTubeExploreScreen(),
