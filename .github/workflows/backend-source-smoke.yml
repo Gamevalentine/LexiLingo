@@ -45,7 +45,7 @@ jobs:
       REDIS_URL: ""
       ENABLE_APP_CORS: "true"
       ALLOWED_ORIGINS: http://localhost:8080
-      ALLOWED_HOSTS: localhost,127.0.0.1
+      ALLOWED_HOSTS: '["localhost","127.0.0.1"]'
       SMTP_HOST: ""
       GOOGLE_CLIENT_ID: ""
       GOOGLE_ADMIN_CLIENT_ID: ""
