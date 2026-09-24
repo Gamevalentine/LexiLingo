@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -29,7 +30,8 @@ class _MainScreenState extends State<MainScreen> {
   bool _starterRewardChecked = false;
 
   // Pages are built lazily — only when the tab is first visited.
-  static const int _pageCount = 5;
+  // Public web runs without accounts, so Profile is not part of web navigation.
+  int get _pageCount => kIsWeb ? 4 : 5;
   final Map<int, Widget> _pageCache = {};
 
   Widget _buildPage(int index) {
@@ -209,11 +211,12 @@ class _MainScreenState extends State<MainScreen> {
               selectedIcon: const Icon(Icons.chat_bubble),
               label: Text('home.navTopic'.tr()),
             ),
-            NavigationRailDestination(
-              icon: const Icon(Icons.account_circle_outlined),
-              selectedIcon: const Icon(Icons.account_circle),
-              label: Text('home.navAccount'.tr()),
-            ),
+            if (!kIsWeb)
+              NavigationRailDestination(
+                icon: const Icon(Icons.account_circle_outlined),
+                selectedIcon: const Icon(Icons.account_circle),
+                label: Text('home.navAccount'.tr()),
+              ),
           ],
         ),
       ),
@@ -270,11 +273,12 @@ class _MainScreenState extends State<MainScreen> {
               activeIcon: const Icon(Icons.chat_bubble),
               label: 'home.navTopic'.tr(),
             ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.account_circle_outlined),
-              activeIcon: const Icon(Icons.account_circle),
-              label: 'home.navAccount'.tr(),
-            ),
+            if (!kIsWeb)
+              BottomNavigationBarItem(
+                icon: const Icon(Icons.account_circle_outlined),
+                activeIcon: const Icon(Icons.account_circle),
+                label: 'home.navAccount'.tr(),
+              ),
           ],
         ),
       ),
