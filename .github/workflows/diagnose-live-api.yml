@@ -85,3 +85,29 @@ jobs:
           probe_options "Upstream register preflight from Pages origin" "https://api.lexilingo.me/api/v1/auth/register"
           probe_post_invalid "Pages proxy register malformed request" "https://lexilingo-assistant.pages.dev/api/v1/auth/register"
           probe_post_invalid "Upstream register malformed request" "https://api.lexilingo.me/api/v1/auth/register"
+          echo "===== Chrome-like upstream health ====="
+          curl -sS --max-time 20 \
+            -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36' \
+            -H 'Accept: application/json,text/plain,*/*' \
+            -D /tmp/headers.txt -o /tmp/body.txt \
+            -w 'HTTP=%{http_code} TIME=%{time_total}s\n' \
+            "https://api.lexilingo.me/api/v1/health"
+          sed -n '1,30p' /tmp/headers.txt
+          head -c 1200 /tmp/body.txt
+          echo
+          echo
+
+          echo "===== Chrome-like Pages proxy malformed register ====="
+          curl -sS --max-time 25 -X POST \
+            -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36' \
+            -H 'Accept: application/json,text/plain,*/*' \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: https://lexilingo-assistant.pages.dev' \
+            --data '{}' \
+            -D /tmp/headers.txt -o /tmp/body.txt \
+            -w 'HTTP=%{http_code} TIME=%{time_total}s\n' \
+            "https://lexilingo-assistant.pages.dev/api/v1/auth/register"
+          sed -n '1,40p' /tmp/headers.txt
+          head -c 2000 /tmp/body.txt
+          echo
+          echo
