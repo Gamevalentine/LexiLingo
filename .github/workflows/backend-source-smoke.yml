@@ -1,0 +1,96 @@
+name: Smoke test LexiLingo backend source
+
+on:
+  push:
+    branches:
+      - phase-1-english-assistant
+    paths:
+      - backend-service/**
+      - .github/workflows/backend-source-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lexilingo
+          POSTGRES_PASSWORD: lexilingo_pass
+          POSTGRES_DB: lexilingo_smoke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lexilingo -d lexilingo_smoke"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    defaults:
+      run:
+        working-directory: backend-service
+
+    env:
+      PYTHONPATH: .
+      DATABASE_URL: postgresql+asyncpg://lexilingo:lexilingo_pass@127.0.0.1:5432/lexilingo_smoke
+      SECRET_KEY: smoke-secret-key-only-for-ci-0123456789
+      APP_ENV: development
+      DEBUG: "false"
+      REDIS_URL: ""
+      ENABLE_APP_CORS: "true"
+      ALLOWED_ORIGINS: http://localhost:8080
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      SMTP_HOST: ""
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_ADMIN_CLIENT_ID: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend-service/requirements.txt
+
+      - name: Install backend
+        run: pip install -r requirements.txt
+
+      - name: Create database schema
+        run: python scripts/create_tables.py
+
+      - name: Start API
+        run: |
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/lexilingo-backend.log 2>&1 &
+          echo $! > /tmp/lexilingo-backend.pid
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/health >/tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/lexilingo-backend.log
+          exit 1
+
+      - name: Test register endpoint validation
+        run: |
+          code=$(curl -sS -o /tmp/register.json -w '%{http_code}'             -X POST http://127.0.0.1:8000/api/v1/auth/register             -H 'Content-Type: application/json'             --data '{}')
+          cat /tmp/register.json
+          test "$code" = "422"
+
+      - name: Test actual registration
+        run: |
+          code=$(curl -sS -o /tmp/register-ok.json -w '%{http_code}'             -X POST http://127.0.0.1:8000/api/v1/auth/register             -H 'Content-Type: application/json'             --data '{"email":"smoke.lexilingo@example.com","username":"smoke_user","password":"SmokeTest1!","display_name":"Smoke Test"}')
+          cat /tmp/register-ok.json
+          test "$code" = "201"
+
+      - name: Show backend logs on failure
+        if: failure()
+        run: cat /tmp/lexilingo-backend.log || true
