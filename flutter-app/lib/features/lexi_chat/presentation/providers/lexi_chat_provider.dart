@@ -127,6 +127,20 @@ class LexiChatProvider extends ChangeNotifier {
   String get learnerLevel => _learnerLevel;
   String get nativeLanguage => _nativeLanguage;
 
+  String _buildTutorGreeting() {
+    if (_nativeLanguage == 'vi') {
+      return 'Xin chào! Mình là trợ lý học tiếng Anh của bạn. '
+          'Bạn có thể hỏi bằng tiếng Việt hoặc tiếng Anh. '
+          'Mình có thể giải thích ngữ pháp, sửa câu, luyện hội thoại, '
+          'gợi ý từ vựng và giúp bạn chọn nội dung nên học tiếp.';
+    }
+
+    return 'Hi! I’m your English learning assistant. '
+        'You can ask me in English or your preferred language. '
+        'I can explain grammar, correct sentences, practise conversation, '
+        'build vocabulary and help you choose what to learn next.';
+  }
+
   @override
   void notifyListeners() {
     if (_isDisposed) return;
@@ -161,10 +175,7 @@ class LexiChatProvider extends ChangeNotifier {
           id: 'greeting',
           role: 'assistant',
           content:
-              "Squawk! Hey there, adventurer! I'm Lexi, your English buddy. "
-              "Let's go on a learning adventure together!\n\n"
-              "You can type or speak — I'll help you practice English. "
-              "What would you like to talk about?",
+              _buildTutorGreeting(),
           timestamp: DateTime.now(),
         ),
       );
@@ -280,10 +291,7 @@ class LexiChatProvider extends ChangeNotifier {
             id: 'greeting',
             role: 'assistant',
             content:
-                "Squawk! Hey there, adventurer! I'm Lexi, your English buddy. "
-                "Let's go on a learning adventure together!\n\n"
-                "You can type or speak — I'll help you practice English. "
-                "What would you like to talk about?",
+                _buildTutorGreeting(),
             timestamp: DateTime.now(),
           ),
         );
@@ -668,7 +676,7 @@ class LexiChatProvider extends ChangeNotifier {
                   ? serverText
                   : (accumulated.isNotEmpty
                         ? accumulated
-                        : 'Squawk! Something went quiet. Can you ask that again?');
+                        : 'Something went quiet. Can you ask that again?');
               _messages[idx] = LexiMessage(
                 id: messageId.isNotEmpty ? messageId : placeholderId,
                 role: 'assistant',
