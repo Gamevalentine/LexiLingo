@@ -166,6 +166,7 @@ class _HomePageNewState extends State<HomePageNew> {
                           child: HomeHeader(),
                         ),
                         const AssistantStartCard(),
+                        const TodayPlanSection(),
                         const Padding(
                           padding: EdgeInsets.only(top: 12),
                           child: StreakCardSection(),
@@ -181,7 +182,6 @@ class _HomePageNewState extends State<HomePageNew> {
                             ],
                           ),
                         ),
-                        const TodayPlanSection(),
                         const Padding(
                           padding: EdgeInsets.only(top: 12),
                           child: ActiveBoostsBar(),
