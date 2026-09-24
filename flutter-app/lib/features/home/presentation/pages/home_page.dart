@@ -164,6 +164,7 @@ class _HomePageNewState extends State<HomePageNew> {
                           alignment: Alignment.centerLeft,
                           child: HomeHeader(),
                         ),
+                        const AssistantStartCard(),
                         const Padding(
                           padding: EdgeInsets.only(top: 12),
                           child: StreakCardSection(),
