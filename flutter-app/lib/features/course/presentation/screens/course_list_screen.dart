@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:lexilingo_app/core/widgets/widgets.dart';
 import 'package:lexilingo_app/core/theme/app_theme.dart';
@@ -27,12 +28,16 @@ class _CourseListScreenState extends State<CourseListScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
 
-    // Load categories and courses
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<CourseProvider>();
-      provider.loadCategories();
-      provider.loadCourses();
-    });
+    // Native builds still use the original course backend.
+    // Public web is guest-only, so it uses the local AI learning hub below
+    // and must not call the retired /courses backend.
+    if (!kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final provider = context.read<CourseProvider>();
+        provider.loadCategories();
+        provider.loadCourses();
+      });
+    }
   }
 
   @override
@@ -52,6 +57,10 @@ class _CourseListScreenState extends State<CourseListScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryAccent = AppColorRoles.primary(isDark);
+
+    if (kIsWeb) {
+      return _buildGuestLearningHub(context, primaryAccent);
+    }
 
     return Scaffold(
       body: Consumer<CourseProvider>(
@@ -332,6 +341,231 @@ class _CourseListScreenState extends State<CourseListScreen> {
         childCount:
             nonEmptyCategorySections.length +
             (provider.isLoadingCourses ? 1 : 0),
+      ),
+    );
+  }
+
+  Widget _buildGuestLearningHub(
+    BuildContext context,
+    Color primaryAccent,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final muted = isDark ? Colors.white60 : Colors.grey[600];
+
+    void openTutor(String prompt) {
+      Navigator.pushNamed(
+        context,
+        '/lexi',
+        arguments: <String, dynamic>{'starterPrompt': prompt},
+      );
+    }
+
+    final lessons = <({IconData icon, String title, String subtitle, String prompt})>[
+      (
+        icon: Icons.school_rounded,
+        title: 'Ngữ pháp nền tảng',
+        subtitle: 'Học ngữ pháp theo cách dễ hiểu, có ví dụ và bài tập ngắn.',
+        prompt:
+            'Hãy dạy tôi một bài ngữ pháp tiếng Anh phù hợp trình độ B1. Giải thích ngắn bằng tiếng Việt, cho ví dụ tiếng Anh và 3 câu luyện tập.',
+      ),
+      (
+        icon: Icons.forum_rounded,
+        title: 'Luyện hội thoại',
+        subtitle: 'Nói tiếng Anh theo tình huống thực tế và được sửa ngay khi cần.',
+        prompt:
+            'Mình muốn luyện hội thoại tiếng Anh. Hãy bắt đầu nói với mình bằng tiếng Anh ở trình độ B1, mỗi lượt một câu hỏi tự nhiên và sửa lỗi nếu mình nói sai.',
+      ),
+      (
+        icon: Icons.fact_check_rounded,
+        title: 'Sửa câu tiếng Anh',
+        subtitle: 'Gửi câu của bạn để kiểm tra ngữ pháp, từ vựng và cách diễn đạt.',
+        prompt:
+            'Mình muốn gửi một câu tiếng Anh để bạn sửa. Hãy chỉ ra lỗi, đưa câu tự nhiên hơn và giải thích ngắn bằng tiếng Việt.',
+      ),
+      (
+        icon: Icons.style_rounded,
+        title: 'Từ vựng theo chủ đề',
+        subtitle: 'Học từ mới có nghĩa, cách dùng và ví dụ thực tế.',
+        prompt:
+            'Hãy dạy mình 10 từ vựng tiếng Anh theo một chủ đề thực tế phù hợp B1, kèm nghĩa tiếng Việt và câu ví dụ ngắn.',
+      ),
+      (
+        icon: Icons.mic_rounded,
+        title: 'Luyện phát âm',
+        subtitle: 'Luyện âm, trọng âm và câu nói thường dùng.',
+        prompt:
+            'Hãy giúp mình luyện phát âm tiếng Anh. Chọn 5 từ/cụm từ thường dùng, ghi cách đọc dễ hiểu cho người Việt và cho câu mẫu.',
+      ),
+      (
+        icon: Icons.route_rounded,
+        title: 'Bài học hôm nay',
+        subtitle: 'Để trợ lý chọn nội dung phù hợp và dẫn bạn học từng bước.',
+        prompt:
+            'Hãy tạo cho mình một bài học tiếng Anh khoảng 10 phút hôm nay ở trình độ B1, gồm từ vựng, ngữ pháp và một đoạn hội thoại ngắn.',
+      ),
+    ];
+
+    return Scaffold(
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1180),
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 100,
+                floating: true,
+                pinned: true,
+                automaticallyImplyLeading: false,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: primaryAccent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.menu_book_rounded,
+                              color: Theme.of(context).colorScheme.surface,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Học tập',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'Học trực tiếp với Trợ lý AI',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: muted),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: _CourseBanner()),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                sliver: SliverGrid(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final lesson = lessons[index];
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => openTutor(lesson.prompt),
+                          child: Container(
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.surfaceDarkMuted
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: primaryAccent.withValues(alpha: 0.18),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(
+                                    alpha: isDark ? 0.20 : 0.05,
+                                  ),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: primaryAccent.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  child: Icon(
+                                    lesson.icon,
+                                    color: primaryAccent,
+                                    size: 25,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  lesson.title,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  lesson.subtitle,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: muted, height: 1.4),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Bắt đầu',
+                                      style: TextStyle(
+                                        color: primaryAccent,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      Icons.arrow_forward_rounded,
+                                      size: 18,
+                                      color: primaryAccent,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: lessons.length,
+                  ),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 360,
+                    mainAxisExtent: 220,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
