@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:lexilingo_app/core/widgets/widgets.dart';
@@ -256,45 +257,46 @@ class _VocabLibraryPageState extends State<VocabLibraryPage> {
             },
           ),
 
-          const SizedBox(height: 24),
+          if (!kIsWeb) ...[
+            const SizedBox(height: 24),
 
-          // Section 2: Custom Decks Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'vocabulary.customDecksHeader'.tr(),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add, color: AppColors.primary),
-                onPressed: () => _showCreateDeckDialog(context, vocabProvider),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Grid for custom decks
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.85,
+            // Custom decks require the authenticated backend and are hidden
+            // from the public guest web build.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'vocabulary.customDecksHeader'.tr(),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add, color: AppColors.primary),
+                  onPressed: () => _showCreateDeckDialog(context, vocabProvider),
+                ),
+              ],
             ),
-            itemCount: customDecks.length + 1, // +1 for the "Create Deck" card
-            itemBuilder: (context, index) {
-              if (index == customDecks.length) {
-                return _buildCreateDeckCard(context, vocabProvider);
-              }
-              final deck = customDecks[index];
-              return _buildCustomDeckCard(context, deck, vocabProvider);
-            },
-          ),
+            const SizedBox(height: 12),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.85,
+              ),
+              itemCount: customDecks.length + 1,
+              itemBuilder: (context, index) {
+                if (index == customDecks.length) {
+                  return _buildCreateDeckCard(context, vocabProvider);
+                }
+                final deck = customDecks[index];
+                return _buildCustomDeckCard(context, deck, vocabProvider);
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -893,6 +895,18 @@ class _VocabLibraryPageState extends State<VocabLibraryPage> {
   }
 
   Future<void> _startTopicStudy(BuildContext context, _TopicConfig topic) async {
+    if (kIsWeb) {
+      final title = topic.titleKey.tr();
+      Navigator.of(context).pushNamed(
+        '/lexi',
+        arguments: <String, dynamic>{
+          'starterPrompt':
+              'Hãy giúp mình học từ vựng tiếng Anh theo chủ đề "$title" ở trình độ B1. Dạy 10 từ có nghĩa tiếng Việt và ví dụ, sau đó kiểm tra mình từng câu một.',
+        },
+      );
+      return;
+    }
+
     final mode = await _chooseReviewMode(context);
     if (mode == null || !context.mounted) return;
     if (mode == _ReviewMode.quiz) {
