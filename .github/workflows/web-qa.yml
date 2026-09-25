@@ -8,7 +8,6 @@ on:
       - flutter-app/**
       - functions/**
       - wrangler.toml
-      - .github/workflows/web-qa.yml
   workflow_dispatch:
 
 permissions:
@@ -47,8 +46,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Wait for matching Pages deployment
-        run: sleep 5
+      - name: Wait for exact Pages deployment
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 90); do
+            live_sha=$(curl -fsS --max-time 10 "https://lexilingo-assistant.pages.dev/build-info.json?ts=$i" 2>/dev/null | jq -r '.sha // empty' || true)
+            echo "live=$live_sha expected=$GITHUB_SHA"
+            if [ "$live_sha" = "$GITHUB_SHA" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Timed out waiting for deployment $GITHUB_SHA"
+          exit 1
 
       - name: Verify public shell
         run: |
@@ -92,8 +102,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
-      - name: Wait for matching Pages deployment
-        run: sleep 5
+      - name: Wait for exact Pages deployment
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 90); do
+            live_sha=$(curl -fsS --max-time 10 "https://lexilingo-assistant.pages.dev/build-info.json?ts=$i" 2>/dev/null | jq -r '.sha // empty' || true)
+            echo "live=$live_sha expected=$GITHUB_SHA"
+            if [ "$live_sha" = "$GITHUB_SHA" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Timed out waiting for deployment $GITHUB_SHA"
+          exit 1
 
       - name: Install Playwright
         run: |
@@ -114,11 +135,19 @@ jobs:
               ['courses', 'https://lexilingo-assistant.pages.dev/#/courses', 1440, 900],
               ['lexi', 'https://lexilingo-assistant.pages.dev/#/lexi', 1440, 900],
               ['games', 'https://lexilingo-assistant.pages.dev/#/games', 1440, 900],
+              ['today-plan', 'https://lexilingo-assistant.pages.dev/#/today-plan', 1440, 900],
+              ['placement-test', 'https://lexilingo-assistant.pages.dev/#/placement-test', 1440, 900],
+              ['news', 'https://lexilingo-assistant.pages.dev/#/news', 1440, 900],
+              ['podcast', 'https://lexilingo-assistant.pages.dev/#/podcast', 1440, 900],
+              ['books', 'https://lexilingo-assistant.pages.dev/#/books', 1440, 900],
             ];
 
             let failed = false;
             for (const [name, url, width, height] of targets) {
-              const page = await browser.newPage({ viewport: { width, height } });
+              const page = await browser.newPage({
+                viewport: { width, height },
+                locale: 'vi-VN',
+              });
               const problems = [];
 
               page.on('pageerror', error => {
@@ -134,8 +163,8 @@ jobs:
 
               try {
                 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-                await page.waitForSelector('flutter-view', { timeout: 10000 });
-                await page.waitForTimeout(5000);
+                await page.waitForSelector('flutter-view', { timeout: 20000 });
+                await page.waitForTimeout(3500);
               } catch (error) {
                 problems.push('navigation: ' + error.message);
               }
