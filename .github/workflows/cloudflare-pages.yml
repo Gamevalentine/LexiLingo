@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - phase-1-english-assistant
+    paths:
+      - flutter-app/**
+      - functions/**
+      - wrangler.toml
+      - .github/workflows/cloudflare-pages.yml
   workflow_dispatch:
 
 permissions:
