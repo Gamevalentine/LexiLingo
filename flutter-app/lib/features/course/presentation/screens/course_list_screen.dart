@@ -718,7 +718,7 @@ class _CourseBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'Start Learning',
+                    'Bắt đầu học',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -733,7 +733,7 @@ class _CourseBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Pick a course & start your\nlanguage journey today!',
+                    'Chọn nội dung và bắt đầu\nhọc tiếng Anh ngay hôm nay!',
                     textAlign: TextAlign.right,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.9),
