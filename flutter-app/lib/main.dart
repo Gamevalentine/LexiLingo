@@ -610,6 +610,11 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                 return ResetPasswordPage(initialToken: token);
               },
             },
+            onUnknownRoute: (_) => MaterialPageRoute(
+              builder: (_) => kIsWeb
+                  ? const LearnerTheme(child: MainScreen(initialIndex: 0))
+                  : const AuthWrapper(),
+            ),
           );
         },
       ),
