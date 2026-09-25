@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:lexilingo_app/core/error/failures.dart';
 import 'package:lexilingo_app/core/network/api_client.dart';
@@ -59,7 +60,9 @@ class VocabProvider extends ChangeNotifier {
       unawaited(loadWords());
     });
     unawaited(loadWords());
-    unawaited(loadDecks());
+    if (!kIsWeb) {
+      unawaited(loadDecks());
+    }
   }
 
   List<VocabWord> get words => _words;
@@ -105,8 +108,8 @@ class VocabProvider extends ChangeNotifier {
       },
     );
 
-    // Merge with backend collection (words saved from book reader, YouTube, news).
-    if (_apiClient != null) {
+    // Merge with backend collection only on authenticated/native builds.
+    if (!kIsWeb && _apiClient != null) {
       try {
         final backendWords = await _fetchBackendCollection();
         final localWordSet = {for (final w in _words) w.word.toLowerCase()};
@@ -299,6 +302,11 @@ class VocabProvider extends ChangeNotifier {
   List<VocabularyDeck> get decks => _decks;
 
   Future<void> loadDecks() async {
+    if (kIsWeb) {
+      _decks = [];
+      _errorMessage = null;
+      return;
+    }
     if (_apiClient == null) return;
     _isLoading = true;
     notifyListeners();
