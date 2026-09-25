@@ -1,0 +1,156 @@
+name: QA LexiLingo Web
+
+on:
+  workflow_run:
+    workflows:
+      - Deploy LexiLingo English Assistant to Cloudflare Pages
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-qa:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: flutter-app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.4'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Static analysis
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Release compile smoke
+        run: flutter build web --release --no-wasm-dry-run
+
+  live-api-smoke:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify public shell
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/home.html -w '%{http_code}' --max-time 20             https://lexilingo-assistant.pages.dev/)
+          test "$code" = "200"
+          grep -q "flutter_bootstrap.js" /tmp/home.html
+
+      - name: Verify public config
+        run: |
+          set -euo pipefail
+          cfg=$(curl -fsS --max-time 20             https://lexilingo-assistant.pages.dev/assets/assets/env/prod_config)
+          printf '%s
+' "$cfg"
+          printf '%s' "$cfg" | grep -q             'API_BASE_URL=https://lexilingo-assistant.pages.dev/api/v1'
+
+      - name: Verify guest session API
+        run: |
+          set -euo pipefail
+          body=$(curl -fsS --max-time 20             -X POST https://lexilingo-assistant.pages.dev/api/v1/lexi/sessions             -H 'Content-Type: application/json'             --data '{"user_id":"qa_guest"}')
+          printf '%s
+' "$body"
+          printf '%s' "$body" | jq -e '.session_id | length > 0' >/dev/null
+
+      - name: Verify Workers AI answer
+        run: |
+          set -euo pipefail
+          body=$(curl -fsS --max-time 60             -X POST https://lexilingo-assistant.pages.dev/api/v1/lexi/chat             -H 'Content-Type: application/json'             --data '{"user_id":"qa_guest","session_id":"qa","message":"Reply with one short English sentence for a B1 learner.","learner_level":"B1","native_language":"vi"}')
+          printf '%s
+' "$body"
+          printf '%s' "$body" | jq -e             '(.lexi_response // .response // "") | length > 0' >/dev/null
+
+      - name: Verify legacy API fails fast, never 522
+        run: |
+          set -euo pipefail
+          metrics=$(curl -sS --max-time 8 -o /tmp/legacy.json             -w '%{http_code} %{time_total}'             https://lexilingo-assistant.pages.dev/api/v1/courses)
+          echo "$metrics"
+          code=$(echo "$metrics" | awk '{print $1}')
+          elapsed=$(echo "$metrics" | awk '{print $2}')
+          test "$code" = "410"
+          awk -v t="$elapsed" 'BEGIN { exit !(t < 5.0) }'
+
+  browser-smoke:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 --silent
+          npx playwright install --with-deps chromium
+
+      - name: Browser route smoke
+        run: |
+          cat > /tmp/qa.js <<'EOF'
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const targets = [
+              { name: 'home-desktop', url: 'https://lexilingo-assistant.pages.dev/', width: 1440, height: 900 },
+              { name: 'home-mobile', url: 'https://lexilingo-assistant.pages.dev/', width: 390, height: 844 },
+              { name: 'courses', url: 'https://lexilingo-assistant.pages.dev/#/courses', width: 1440, height: 900 },
+              { name: 'lexi', url: 'https://lexilingo-assistant.pages.dev/#/lexi', width: 1440, height: 900 },
+              { name: 'games', url: 'https://lexilingo-assistant.pages.dev/#/games', width: 1440, height: 900 },
+            ];
+
+            let failed = false;
+            for (const target of targets) {
+              const page = await browser.newPage({
+                viewport: { width: target.width, height: target.height },
+              });
+              const problems = [];
+
+              page.on('pageerror', (error) => {
+                problems.push(`pageerror: ${error.message}`);
+              });
+              page.on('response', (response) => {
+                const url = response.url();
+                const status = response.status();
+                if (url.includes('/api/v1/') && status >= 500) {
+                  problems.push(`API ${status}: ${url}`);
+                }
+              });
+
+              try {
+                await page.goto(target.url, {
+                  waitUntil: 'domcontentloaded',
+                  timeout: 30000,
+                });
+                await page.waitForSelector('flutter-view', { timeout: 30000 });
+                await page.waitForTimeout(5000);
+              } catch (error) {
+                problems.push(`navigation: ${error.message}`);
+              }
+
+              console.log(`${target.name}: ${problems.length ? 'FAIL' : 'PASS'}`);
+              for (const problem of problems) console.log(`  ${problem}`);
+              if (problems.length) failed = true;
+              await page.close();
+            }
+
+            await browser.close();
+            if (failed) process.exit(1);
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          EOF
+          node /tmp/qa.js
