@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:dartz/dartz.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lexilingo_app/core/services/background_sync_queue_service.dart';
@@ -149,8 +150,9 @@ class VocabRepositoryImpl implements VocabRepository {
   }
 
   Future<void> _enqueueVocabSync(String userScope, VocabWord word) async {
-    // Avoid queueing for anonymous scope (not authenticated yet).
-    if (userScope == 'anonymous') return;
+    // Guest web is intentionally local-only; never accumulate sync work
+    // that cannot be delivered to the retired authenticated backend.
+    if (kIsWeb || userScope == 'anonymous') return;
 
     final idempotencyKey =
         'vocab-$userScope-${word.word.toLowerCase()}-${DateTime.now().millisecondsSinceEpoch}';
