@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
@@ -64,7 +65,13 @@ class _GamesHubScreenState extends State<GamesHubScreen>
       final p = context.read<GamesProvider>();
       p.loadXPProfile();
       p.loadLeaderboard();
-      context.read<DailyChallengesProvider>().loadChallenges();
+
+      // Guest web games run without the retired authenticated backend.
+      // Keep the local fallback daily challenge instead of waiting for a 522.
+      if (!kIsWeb) {
+        context.read<DailyChallengesProvider>().loadChallenges();
+      }
+
       Future.delayed(const Duration(milliseconds: 600), () {
         if (mounted) _podiumController.forward();
       });
