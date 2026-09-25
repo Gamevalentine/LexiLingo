@@ -436,7 +436,12 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                 (context) => const MainScreen(initialIndex: 1),
               ),
               '/today-plan': LearnerRoute.builder(
-                (context) => const TodayPlanPage(),
+                (context) => kIsWeb
+                    ? const LexiChatPage(
+                        initialPrompt:
+                            'Hãy lập cho mình kế hoạch học tiếng Anh hôm nay trong 15 phút ở trình độ B1, gồm từ vựng, ngữ pháp và hội thoại ngắn.',
+                      )
+                    : const TodayPlanPage(),
               ),
               '/practice-lab': LearnerRoute.builder(
                 (context) => const PracticeLabPage(),
@@ -445,31 +450,49 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                 (context) => const MistakeNotebookPage(),
               ),
               '/profile': LearnerRoute.builder(
-                (context) => const MainScreen(initialIndex: 4),
+                (context) => kIsWeb
+                    ? const MainScreen(initialIndex: 0)
+                    : const MainScreen(initialIndex: 4),
               ),
               '/achievements': LearnerRoute.builder(
-                (context) => const AchievementsScreen(),
+                (context) => kIsWeb
+                    ? const MainScreen(initialIndex: 0)
+                    : const AchievementsScreen(),
               ),
               '/social': LearnerRoute.builder(
-                (context) => const SocialScreen(),
+                (context) => kIsWeb
+                    ? const MainScreen(initialIndex: 0)
+                    : const SocialScreen(),
               ),
               '/premium': LearnerRoute.builder(
-                (context) => const PaywallScreen(),
+                (context) => kIsWeb
+                    ? const MainScreen(initialIndex: 0)
+                    : const PaywallScreen(),
               ),
               '/offline-sync': LearnerRoute.builder(
                 (context) => const OfflineSyncCenterPage(),
               ),
               '/placement-test': LearnerRoute.builder(
-                (context) => ChangeNotifierProvider(
-                  create: (_) => di.sl<PlacementTestProvider>(),
-                  child: const PlacementTestPage(),
-                ),
+                (context) => kIsWeb
+                    ? const LexiChatPage(
+                        initialPrompt:
+                            'Hãy kiểm tra nhanh trình độ tiếng Anh của mình bằng 8 câu hỏi tăng dần độ khó. Hỏi từng câu một, chờ mình trả lời rồi mới tiếp tục. Cuối cùng ước lượng CEFR và giải thích ngắn.',
+                      )
+                    : ChangeNotifierProvider(
+                        create: (_) => di.sl<PlacementTestProvider>(),
+                        child: const PlacementTestPage(),
+                      ),
               ),
               '/vocabulary/review': LearnerRoute.builder(
-                (context) => ChangeNotifierProvider(
-                  create: (_) => vocab_di.getIt<FlashcardProvider>(),
-                  child: const FlashcardReviewScreen(),
-                ),
+                (context) => kIsWeb
+                    ? const LexiChatPage(
+                        initialPrompt:
+                            'Hãy ôn từ vựng tiếng Anh với mình bằng 10 câu hỏi ngắn trình độ B1. Hỏi từng câu một, chờ mình trả lời, sửa sai và giải thích bằng tiếng Việt khi cần.',
+                      )
+                    : ChangeNotifierProvider(
+                        create: (_) => vocab_di.getIt<FlashcardProvider>(),
+                        child: const FlashcardReviewScreen(),
+                      ),
               ),
               '/vocabulary/word-of-day': LearnerRoute.builder(
                 (context) => const WordOfDayScreen(),
