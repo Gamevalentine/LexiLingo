@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:lexilingo_app/core/theme/app_theme.dart';
 import 'package:lexilingo_app/core/widgets/game_icon.dart';
@@ -32,6 +33,16 @@ class _DailyReviewCardState extends State<DailyReviewCard> {
   }
 
   Future<void> _loadDueCount() async {
+    if (kIsWeb) {
+      if (mounted) {
+        setState(() {
+          _dueCount = 0;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     var dueCount = 0;
     try {
       final result = await vocab_di
