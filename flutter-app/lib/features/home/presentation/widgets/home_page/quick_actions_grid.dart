@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:lexilingo_app/core/navigation/learner_route.dart';
 import 'package:lexilingo_app/core/theme/app_theme.dart';
 import 'package:lexilingo_app/features/vocabulary/presentation/pages/vocab_library_page.dart';
@@ -22,58 +23,116 @@ class QuickActionsGrid extends StatelessWidget {
       Color(0xFFFF369E), // Vocabulary
     ];
 
-    final quickActions = [
-      {
-        'icon': Icons.videocam_rounded,
-        'label': 'home.youtube',
-        'color': isDark ? neonDarkActionColors[0] : AppColors.dangerGradient[0],
-        'bgColor':
-            (isDark ? neonDarkActionColors[0] : AppColors.dangerGradient[0])
-                .withValues(alpha: isDark ? 0.16 : 0.1),
-        'route': '/youtube',
-      },
-      {
-        'icon': Icons.article,
-        'label': 'home.news',
-        'color': isDark ? neonDarkActionColors[1] : AppColors.teal,
-        'bgColor': (isDark ? neonDarkActionColors[1] : AppColors.teal)
-            .withValues(alpha: isDark ? 0.16 : 0.1),
-        'route': '/news',
-      },
-      {
-        'icon': Icons.sports_esports,
-        'label': 'home.games',
-        'color': isDark ? neonDarkActionColors[2] : AppColors.purple,
-        'bgColor': (isDark ? neonDarkActionColors[2] : AppColors.purple)
-            .withValues(alpha: isDark ? 0.16 : 0.1),
-        'route': '/games',
-      },
-      {
-        'icon': Icons.podcasts,
-        'label': 'home.podcast',
-        'color': isDark ? neonDarkActionColors[3] : accent,
-        'bgColor': (isDark ? neonDarkActionColors[3] : accent).withValues(
-          alpha: isDark ? 0.16 : 0.12,
-        ),
-        'route': '/podcast',
-      },
-      {
-        'icon': Icons.menu_book_rounded,
-        'label': 'home.books',
-        'color': isDark ? neonDarkActionColors[4] : AppColors.purpleLight,
-        'bgColor': (isDark ? neonDarkActionColors[4] : AppColors.purple)
-            .withValues(alpha: isDark ? 0.16 : 0.1),
-        'route': '/books',
-      },
-      {
-        'icon': Icons.style,
-        'label': 'home.vocabulary',
-        'color': isDark ? neonDarkActionColors[5] : AppColors.orange,
-        'bgColor': (isDark ? neonDarkActionColors[5] : AppColors.warning)
-            .withValues(alpha: isDark ? 0.16 : 0.1),
-        'route': '/vocab',
-      },
-    ];
+    final quickActions = kIsWeb
+        ? [
+            {
+              'icon': Icons.sports_esports,
+              'labelText': 'Trò chơi',
+              'color': isDark ? neonDarkActionColors[2] : AppColors.purple,
+              'bgColor': (isDark ? neonDarkActionColors[2] : AppColors.purple)
+                  .withValues(alpha: isDark ? 0.16 : 0.1),
+              'route': '/games',
+            },
+            {
+              'icon': Icons.style,
+              'labelText': 'Từ vựng',
+              'color': isDark ? neonDarkActionColors[5] : AppColors.orange,
+              'bgColor': (isDark ? neonDarkActionColors[5] : AppColors.warning)
+                  .withValues(alpha: isDark ? 0.16 : 0.1),
+              'route': '/vocab',
+            },
+            {
+              'icon': Icons.forum_rounded,
+              'labelText': 'Hội thoại',
+              'color': isDark ? neonDarkActionColors[3] : accent,
+              'bgColor': (isDark ? neonDarkActionColors[3] : accent)
+                  .withValues(alpha: isDark ? 0.16 : 0.12),
+              'route': '/lexi',
+              'prompt':
+                  'Mình muốn luyện hội thoại tiếng Anh. Hãy bắt đầu ngay bằng tiếng Anh ở trình độ B1, mỗi lượt một câu hỏi tự nhiên.',
+            },
+            {
+              'icon': Icons.school_rounded,
+              'labelText': 'Ngữ pháp',
+              'color': isDark ? neonDarkActionColors[4] : AppColors.purpleLight,
+              'bgColor': (isDark ? neonDarkActionColors[4] : AppColors.purple)
+                  .withValues(alpha: isDark ? 0.16 : 0.1),
+              'route': '/lexi',
+              'prompt':
+                  'Hãy dạy mình một bài ngữ pháp tiếng Anh trình độ B1 thật ngắn gọn, có ví dụ và 3 câu luyện tập.',
+            },
+            {
+              'icon': Icons.mic_rounded,
+              'labelText': 'Phát âm',
+              'color': isDark ? neonDarkActionColors[1] : AppColors.teal,
+              'bgColor': (isDark ? neonDarkActionColors[1] : AppColors.teal)
+                  .withValues(alpha: isDark ? 0.16 : 0.1),
+              'route': '/lexi',
+              'prompt':
+                  'Hãy giúp mình luyện phát âm tiếng Anh với 5 từ/cụm từ thường dùng, cách đọc dễ hiểu và câu mẫu.',
+            },
+            {
+              'icon': Icons.route_rounded,
+              'labelText': 'Bài hôm nay',
+              'color': isDark ? neonDarkActionColors[0] : AppColors.dangerGradient[0],
+              'bgColor':
+                  (isDark ? neonDarkActionColors[0] : AppColors.dangerGradient[0])
+                      .withValues(alpha: isDark ? 0.16 : 0.1),
+              'route': '/today-plan',
+            },
+          ]
+        : [
+            {
+              'icon': Icons.videocam_rounded,
+              'label': 'home.youtube',
+              'color': isDark ? neonDarkActionColors[0] : AppColors.dangerGradient[0],
+              'bgColor':
+                  (isDark ? neonDarkActionColors[0] : AppColors.dangerGradient[0])
+                      .withValues(alpha: isDark ? 0.16 : 0.1),
+              'route': '/youtube',
+            },
+            {
+              'icon': Icons.article,
+              'label': 'home.news',
+              'color': isDark ? neonDarkActionColors[1] : AppColors.teal,
+              'bgColor': (isDark ? neonDarkActionColors[1] : AppColors.teal)
+                  .withValues(alpha: isDark ? 0.16 : 0.1),
+              'route': '/news',
+            },
+            {
+              'icon': Icons.sports_esports,
+              'label': 'home.games',
+              'color': isDark ? neonDarkActionColors[2] : AppColors.purple,
+              'bgColor': (isDark ? neonDarkActionColors[2] : AppColors.purple)
+                  .withValues(alpha: isDark ? 0.16 : 0.1),
+              'route': '/games',
+            },
+            {
+              'icon': Icons.podcasts,
+              'label': 'home.podcast',
+              'color': isDark ? neonDarkActionColors[3] : accent,
+              'bgColor': (isDark ? neonDarkActionColors[3] : accent).withValues(
+                alpha: isDark ? 0.16 : 0.12,
+              ),
+              'route': '/podcast',
+            },
+            {
+              'icon': Icons.menu_book_rounded,
+              'label': 'home.books',
+              'color': isDark ? neonDarkActionColors[4] : AppColors.purpleLight,
+              'bgColor': (isDark ? neonDarkActionColors[4] : AppColors.purple)
+                  .withValues(alpha: isDark ? 0.16 : 0.1),
+              'route': '/books',
+            },
+            {
+              'icon': Icons.style,
+              'label': 'home.vocabulary',
+              'color': isDark ? neonDarkActionColors[5] : AppColors.orange,
+              'bgColor': (isDark ? neonDarkActionColors[5] : AppColors.warning)
+                  .withValues(alpha: isDark ? 0.16 : 0.1),
+              'route': '/vocab',
+            },
+          ];
 
     const spacing = 12.0;
 
@@ -108,7 +167,8 @@ class QuickActionsGrid extends StatelessWidget {
               final action = quickActions[index];
               return _QuickActionChip(
                 icon: action['icon'] as IconData,
-                label: (action['label'] as String).tr(),
+                label: action['labelText'] as String? ??
+                    (action['label'] as String).tr(),
                 color: action['color'] as Color,
                 bgColor: action['bgColor'] as Color,
                 iconSize: iconSize,
@@ -116,6 +176,14 @@ class QuickActionsGrid extends StatelessWidget {
                   final route = action['route'] as String;
                   if (route == '/vocab') {
                     LearnerRoute.push(context, (_) => const VocabLibraryPage());
+                  } else if (route == '/lexi' && action['prompt'] is String) {
+                    Navigator.pushNamed(
+                      context,
+                      route,
+                      arguments: <String, dynamic>{
+                        'starterPrompt': action['prompt'] as String,
+                      },
+                    );
                   } else {
                     Navigator.pushNamed(context, route);
                   }
