@@ -78,25 +78,36 @@ jobs:
 
           (async () => {
             const browser = await chromium.launch({ headless: true });
-            const defaultStack = await probe(browser, 'default');
-            await probe(browser, 'en-US', { locale: 'en-US' });
-            await probe(browser, 'vi-VN', { locale: 'vi-VN' });
+            const stacks = [
+              ['default', await probe(browser, 'default')],
+              ['en-US', await probe(browser, 'en-US', { locale: 'en-US' })],
+              ['vi-VN', await probe(browser, 'vi-VN', { locale: 'vi-VN' })],
+            ];
             await browser.close();
 
-            const match = defaultStack.match(/main\.dart\.js:(\d+):(\d+)/);
-            if (!match) {
-              console.log('No main.dart.js frame to map');
-              return;
-            }
-
-            const line = Number(match[1]);
-            const column = Number(match[2]);
             const rawMap = JSON.parse(
               fs.readFileSync('flutter-app/build/web/main.dart.js.map', 'utf8')
             );
             const consumer = await new SourceMapConsumer(rawMap);
-            const original = consumer.originalPositionFor({ line, column });
-            console.log('MAPPED_FRAME', { line, column, original });
+
+            for (const [label, stack] of stacks) {
+              const frames = [...stack.matchAll(/main\.dart\.js:(\d+):(\d+)/g)]
+                .slice(0, 5);
+              if (!frames.length) {
+                console.log('NO_MAPPED_FRAME[' + label + ']');
+                continue;
+              }
+              for (const frame of frames) {
+                const line = Number(frame[1]);
+                const column = Number(frame[2]);
+                const original = consumer.originalPositionFor({ line, column });
+                console.log('MAPPED_FRAME[' + label + ']', {
+                  line,
+                  column,
+                  original,
+                });
+              }
+            }
             consumer.destroy();
           })().catch(error => {
             console.error(error);
