@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Wait for matching Pages deployment
-        run: sleep 120
+        run: sleep 5
 
       - name: Verify public shell
         run: |
@@ -122,7 +122,7 @@ jobs:
               const problems = [];
 
               page.on('pageerror', error => {
-                problems.push('pageerror: ' + error.message);
+                problems.push('pageerror: ' + (error.stack || error.message));
               });
               page.on('response', response => {
                 const responseUrl = response.url();
@@ -134,7 +134,7 @@ jobs:
 
               try {
                 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-                await page.waitForSelector('flutter-view', { timeout: 30000 });
+                await page.waitForSelector('flutter-view', { timeout: 10000 });
                 await page.waitForTimeout(5000);
               } catch (error) {
                 problems.push('navigation: ' + error.message);
