@@ -247,7 +247,7 @@ class GamesRepository {
         oldLevel: 1,
         newLevel: 1,
         currentXpInLevel: baseXp,
-        levelProgressPercent: (baseXp / 100).clamp(0.0, 1.0),
+        levelProgressPercent: (baseXp / 100).clamp(0.0, 1.0).toDouble(),
         message: 'Guest XP',
       );
     }
@@ -317,7 +317,7 @@ class GamesRepository {
       {'word': 'healthy', 'hint': 'Opposite of sick', 'definition': 'in good physical condition', 'vi': 'khỏe mạnh'},
       {'word': 'library', 'hint': 'Borrow books here', 'definition': 'a place where books are kept', 'vi': 'thư viện'},
     ];
-    final selected = bank.take(count.clamp(1, bank.length)).toList();
+    final selected = bank.take(count.clamp(1, bank.length).toInt()).toList();
     return WordScrambleGame.fromJson({
       'session_id': 'guest-word-scramble',
       'cefr_level': level,
@@ -386,7 +386,7 @@ class GamesRepository {
         'explanation': 'Wearing a seat belt is an obligation.',
       },
     ];
-    final questions = bank.take(count.clamp(1, bank.length)).map((q) => {
+    final questions = bank.take(count.clamp(1, bank.length).toInt()).map((q) => {
       ...q,
       'cefr_level': level,
     }).toList();
@@ -436,7 +436,7 @@ class GamesRepository {
       'cefr_level': level,
       'timer_seconds': 45,
       'words': [
-        for (final w in bank.take(count.clamp(1, bank.length)))
+        for (final w in bank.take(count.clamp(1, bank.length).toInt()))
           {...w, 'xp_value': 10, 'max_replays': 3},
       ],
     });
@@ -485,7 +485,7 @@ class GamesRepository {
         'topic': 'present_perfect',
       },
     ];
-    final questions = bank.take(count.clamp(1, bank.length)).map((q) => {
+    final questions = bank.take(count.clamp(1, bank.length).toInt()).map((q) => {
       ...q,
       'cefr_level': level,
     }).toList();
@@ -532,7 +532,7 @@ class GamesRepository {
       oldLevel: 1,
       newLevel: 1,
       currentXpInLevel: xp,
-      levelProgressPercent: (xp / 100).clamp(0.0, 1.0),
+      levelProgressPercent: (xp / 100).clamp(0.0, 1.0).toDouble(),
       message: 'Guest session completed',
     );
   }
