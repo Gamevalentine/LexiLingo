@@ -183,7 +183,9 @@ class LexiChatProvider extends ChangeNotifier {
       );
 
       _isLoading = false;
-      unawaited(syncSessions(userId));
+      if (!kIsWeb) {
+        unawaited(syncSessions(userId));
+      }
       notifyListeners();
     } catch (e) {
       _error = 'Failed to start session: $e';
@@ -209,7 +211,9 @@ class LexiChatProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await syncSessions(userId);
+      if (!kIsWeb) {
+        await syncSessions(userId);
+      }
       await _removeSessionsForOtherUsers(userId);
 
       if (_sessions.isNotEmpty) {
@@ -249,11 +253,36 @@ class LexiChatProvider extends ChangeNotifier {
         _messages
           ..clear()
           ..addAll(cachedPage.messages);
-        _hasMoreMessages = cachedPage.hasMore;
-        _nextMessageCursor = cachedPage.nextCursor;
+        _hasMoreMessages = kIsWeb ? false : cachedPage.hasMore;
+        _nextMessageCursor = kIsWeb ? null : cachedPage.nextCursor;
         _isLoading = false;
         restoredFromCache = true;
         notifyListeners();
+
+        // Workers AI guest sessions are intentionally stateless server-side.
+        // The browser cache is the authoritative chat history on web.
+        if (kIsWeb) {
+          _touchSession(summary.sessionId);
+          return;
+        }
+      }
+
+      if (kIsWeb) {
+        _messages
+          ..clear()
+          ..add(
+            LexiMessage(
+              id: 'greeting',
+              role: 'assistant',
+              content: _buildTutorGreeting(),
+              timestamp: DateTime.now(),
+            ),
+          );
+        _hasMoreMessages = false;
+        _nextMessageCursor = null;
+        _isLoading = false;
+        notifyListeners();
+        return;
       }
 
       final page = await repository.getMessagesPaged(
