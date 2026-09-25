@@ -85,12 +85,7 @@ class _LexiChatPageState extends State<LexiChatPage>
       provider.syncTtsWithGlobalSound(
         context.read<SettingsProvider>().soundEnabled,
       );
-      _applyInitialPrompt();
-      unawaited(
-        provider.restoreLatestSession(_userId).catchError((Object error) {
-          debugPrint('restoreLatestSession failed: $error');
-        }),
-      );
+      unawaited(_bootstrapChat(provider));
     });
 
     _scrollController.addListener(_handleTopReached);
@@ -118,15 +113,21 @@ class _LexiChatPageState extends State<LexiChatPage>
   String get _nativeLanguage =>
       LocaleService.normalizeLanguageCode(context.locale.languageCode);
 
-  void _applyInitialPrompt() {
-    if (_initialPromptApplied) return;
+  Future<void> _bootstrapChat(LexiChatProvider provider) async {
+    try {
+      await provider.restoreLatestSession(_userId);
+    } catch (error) {
+      debugPrint('restoreLatestSession failed: $error');
+    }
+    if (!mounted || _initialPromptApplied) return;
+
     final prompt = widget.initialPrompt?.trim();
     if (prompt == null || prompt.isEmpty) return;
 
     _initialPromptApplied = true;
-    _controller.text = prompt;
-    _controller.selection = TextSelection.collapsed(offset: prompt.length);
-    _focusNode.requestFocus();
+    await provider.sendMessageStreaming(prompt, userId: _userId);
+    if (!mounted) return;
+    _scrollToBottom();
   }
 
   @override
