@@ -1,0 +1,107 @@
+name: Diagnose browser locale crash
+
+on:
+  push:
+    branches:
+      - phase-1-english-assistant
+    paths:
+      - .github/workflows/diagnose-browser-locale.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.4'
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        working-directory: flutter-app
+        run: flutter pub get
+
+      - name: Build web with source maps
+        working-directory: flutter-app
+        run: flutter build web --release --source-maps --no-wasm-dry-run
+
+      - name: Install browser diagnostic tools
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 source-map@0.7.4 --silent
+          npx playwright install --with-deps chromium
+
+      - name: Reproduce and map browser error
+        run: |
+          python3 -m http.server 8080 --directory flutter-app/build/web >/tmp/http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+
+          cat > diagnose.js <<'EOF'
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+          const { SourceMapConsumer } = require('source-map');
+
+          async function probe(browser, label, contextOptions = {}) {
+            const context = await browser.newContext(contextOptions);
+            const page = await context.newPage();
+            let stack = '';
+            page.on('pageerror', error => {
+              stack = error.stack || error.message || String(error);
+              console.log('ERROR[' + label + ']\n' + stack);
+            });
+            console.log(
+              'LOCALE[' + label + ']',
+              await page.evaluate(() => ({
+                language: navigator.language,
+                languages: navigator.languages,
+              })).catch(() => null)
+            );
+            await page.goto('http://127.0.0.1:8080/', {
+              waitUntil: 'domcontentloaded',
+              timeout: 30000,
+            });
+            await page.waitForTimeout(5000);
+            const hasFlutter = await page.locator('flutter-view').count();
+            console.log('RESULT[' + label + '] flutter-view=' + hasFlutter);
+            await context.close();
+            return stack;
+          }
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const defaultStack = await probe(browser, 'default');
+            await probe(browser, 'en-US', { locale: 'en-US' });
+            await probe(browser, 'vi-VN', { locale: 'vi-VN' });
+            await browser.close();
+
+            const match = defaultStack.match(/main\.dart\.js:(\d+):(\d+)/);
+            if (!match) {
+              console.log('No main.dart.js frame to map');
+              return;
+            }
+
+            const line = Number(match[1]);
+            const column = Number(match[2]);
+            const rawMap = JSON.parse(
+              fs.readFileSync('flutter-app/build/web/main.dart.js.map', 'utf8')
+            );
+            const consumer = await new SourceMapConsumer(rawMap);
+            const original = consumer.originalPositionFor({ line, column });
+            console.log('MAPPED_FRAME', { line, column, original });
+            consumer.destroy();
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          EOF
+
+          node diagnose.js
