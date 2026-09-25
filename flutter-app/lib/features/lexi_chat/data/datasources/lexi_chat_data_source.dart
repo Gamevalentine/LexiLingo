@@ -205,6 +205,7 @@ class LexiChatDataSource {
     String nativeLanguage = 'vi',
     String? storyContext,
     String? idempotencyKey,
+    List<Map<String, String>> conversationHistory = const [],
   }) async {
     final payload = {
       'user_id': userId,
@@ -216,6 +217,8 @@ class LexiChatDataSource {
       'learner_level': learnerLevel,
       'native_language': nativeLanguage,
       if (storyContext != null) 'story_context': storyContext,
+      if (conversationHistory.isNotEmpty)
+        'conversation_history': conversationHistory,
     };
 
     final json = await apiClient.post(
@@ -491,6 +494,7 @@ class LexiChatDataSource {
     String learnerLevel = 'B1',
     String nativeLanguage = 'vi',
     String? storyContext,
+    List<Map<String, String>> conversationHistory = const [],
   }) async* {
     final payload = {
       'user_id': userId,
@@ -502,6 +506,8 @@ class LexiChatDataSource {
       'learner_level': learnerLevel,
       'native_language': nativeLanguage,
       if (storyContext != null) 'story_context': storyContext,
+      if (conversationHistory.isNotEmpty)
+        'conversation_history': conversationHistory,
     };
 
     final rawStream = apiClient.postStream('/lexi/stream', body: payload);
