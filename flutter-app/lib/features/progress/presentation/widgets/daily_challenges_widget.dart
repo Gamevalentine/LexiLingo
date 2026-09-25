@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:lexilingo_app/core/widgets/lottie_loading_widget.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/daily_challenge_entity.dart';
@@ -22,9 +23,11 @@ class _DailyChallengesCardState extends State<DailyChallengesCard> {
   void initState() {
     super.initState();
     // Load challenges when card is shown
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DailyChallengesProvider>().loadChallenges();
-    });
+    if (!kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<DailyChallengesProvider>().loadChallenges();
+      });
+    }
   }
 
   @override
