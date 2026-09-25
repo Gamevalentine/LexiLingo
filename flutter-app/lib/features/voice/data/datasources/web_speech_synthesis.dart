@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
+// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use, uri_does_not_exist
 
 import 'dart:js' as js;
 import 'dart:js_util' as js_util;
