@@ -773,7 +773,9 @@ class _LexiChatPageState extends State<LexiChatPage>
                 padding: const EdgeInsets.only(bottom: 12),
                 child: LexiDialogueBubble(
                   message: message,
-                  onPlayAudio: message.hasAudio
+                  onPlayAudio:
+                      (message.hasAudio ||
+                          (kIsWeb && message.role == 'assistant'))
                       ? () => provider.replayAudio(message)
                       : null,
                   onShowCorrections:
