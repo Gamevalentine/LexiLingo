@@ -9,6 +9,7 @@ import 'package:lexilingo_app/core/services/background_sync_queue_service.dart';
 import 'package:lexilingo_app/core/services/user_scope_service.dart';
 import 'package:lexilingo_app/core/utils/app_logger.dart';
 import 'package:lexilingo_app/core/utils/constants.dart';
+import 'package:lexilingo_app/features/voice/data/datasources/speech_synthesis_service.dart';
 import 'package:lexilingo_app/features/lexi_chat/domain/entities/lexi_message.dart';
 import 'package:lexilingo_app/features/lexi_chat/domain/entities/lexi_stream_event.dart';
 import 'package:lexilingo_app/features/lexi_chat/domain/entities/lexi_session.dart';
@@ -84,6 +85,7 @@ class LexiChatProvider extends ChangeNotifier {
 
   // Audio player for Lexi's voice
   final AudioPlayer _ttsPlayer = AudioPlayer();
+  final WebSpeechSynthesis _webTts = WebSpeechSynthesis();
 
   // ── Getters ────────────────────────────────────────────────────────────────
   LexiSession? get session => _session;
@@ -447,9 +449,12 @@ class LexiChatProvider extends ChangeNotifier {
       _isSending = false;
       notifyListeners();
 
-      // Auto-play TTS if available
+      // Native backend may return audio; Workers AI web returns text, so use
+      // the browser's built-in speech synthesis there.
       if (_ttsEnabled && response.hasAudio) {
         await _playTtsAudio(response.audioBase64!);
+      } else if (_ttsEnabled && kIsWeb) {
+        _speakWeb(response.content);
       }
     } catch (e) {
       await _endLexiResponseState();
@@ -712,6 +717,12 @@ class LexiChatProvider extends ChangeNotifier {
 
             if (_ttsEnabled && audioBase64 != null && audioBase64.isNotEmpty) {
               await _playTtsAudio(audioBase64);
+            } else if (_ttsEnabled && kIsWeb) {
+              final idx = _messages.indexWhere(
+                (message) =>
+                    message.id == (messageId.isNotEmpty ? messageId : placeholderId),
+              );
+              if (idx != -1) _speakWeb(_messages[idx].content);
             }
           // storyContext is returned by the server for context continuity; no local storage needed.
           case LexiStreamError(:final error):
@@ -905,6 +916,15 @@ class LexiChatProvider extends ChangeNotifier {
   }
 
   // ── TTS Playback ──────────────────────────────────────────────────────────
+  void _speakWeb(String text) {
+    if (!kIsWeb || !_ttsEnabled || !WebSpeechSynthesis.isSupported) return;
+    _webTts.speak(
+      text,
+      language: _nativeLanguage == 'vi' ? 'en-US' : 'en-US',
+      rate: _ttsSpeed,
+    );
+  }
+
   Future<void> _playTtsAudio(String base64Audio) async {
     try {
       final bytes = base64Decode(base64Audio);
@@ -947,6 +967,7 @@ class LexiChatProvider extends ChangeNotifier {
     _ttsEnabled = !_ttsEnabled;
     if (!_ttsEnabled) {
       _ttsPlayer.stop();
+      _webTts.stop();
     }
     notifyListeners();
   }
@@ -974,7 +995,9 @@ class LexiChatProvider extends ChangeNotifier {
     } else {
       _ttsSpeed = 1.0;
     }
-    await _ttsPlayer.setSpeed(_ttsSpeed);
+    if (!kIsWeb) {
+      await _ttsPlayer.setSpeed(_ttsSpeed);
+    }
     notifyListeners();
   }
 
@@ -1000,6 +1023,7 @@ class LexiChatProvider extends ChangeNotifier {
     _isDisposed = true;
     _syncQueueSub?.cancel();
     _typingStageTimer?.cancel();
+    _webTts.stop();
     _ttsPlayer.dispose();
     super.dispose();
   }
