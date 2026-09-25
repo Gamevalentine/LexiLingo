@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:lexilingo_app/features/voice/data/datasources/voice_remote_datasource.dart';
+import 'package:lexilingo_app/features/voice/data/datasources/speech_synthesis_service.dart';
 
 /// Audio playback error that can be surfaced to the UI without blocking the game.
 class AudioError {
@@ -61,6 +62,7 @@ class JustAudioPlayerAdapter implements AudioPlayerAdapter {
 class GamePronunciationService {
   final VoiceRemoteDataSource _voiceDataSource;
   final AudioPlayerAdapter _player;
+  final WebSpeechSynthesis _webTts = WebSpeechSynthesis();
 
   GamePronunciationService({
     required VoiceRemoteDataSource voiceDataSource,
@@ -93,6 +95,9 @@ class GamePronunciationService {
     try {
       if (audioUrl != null && audioUrl.isNotEmpty) {
         return await _playFromUrl(audioUrl, playsLeft);
+      } else if (kIsWeb && WebSpeechSynthesis.isSupported) {
+        _webTts.speak(text, language: 'en-US', rate: 0.85);
+        return playsLeft - 1;
       } else {
         return await _playFromTts(text, playsLeft);
       }
@@ -136,6 +141,7 @@ class GamePronunciationService {
   }
 
   Future<void> dispose() async {
+    _webTts.stop();
     await _player.dispose();
   }
 }
