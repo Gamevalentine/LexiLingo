@@ -967,6 +967,8 @@ class LexiChatProvider extends ChangeNotifier {
   Future<void> replayAudio(LexiMessage message) async {
     if (message.hasAudio) {
       await _playTtsAudio(message.audioBase64!);
+    } else if (kIsWeb && message.role == 'assistant') {
+      _speakWeb(message.content);
     }
   }
 
