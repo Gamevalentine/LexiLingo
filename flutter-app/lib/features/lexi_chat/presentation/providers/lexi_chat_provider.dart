@@ -37,6 +37,7 @@ class LexiChatProvider extends ChangeNotifier {
   final BackgroundSyncQueueService _syncQueue =
       BackgroundSyncQueueService.instance;
   StreamSubscription<SyncQueueItem>? _syncQueueSub;
+  final Completer<void> _savedSessionsReady = Completer<void>();
   bool _isDisposed = false;
 
   LexiChatProvider({required this.repository, required AiApiClient aiClient})
@@ -204,6 +205,9 @@ class LexiChatProvider extends ChangeNotifier {
 
   Future<void> restoreLatestSession(String userId) async {
     if (_isRestoringSession || _session != null) return;
+
+    await _savedSessionsReady.future;
+    if (_isDisposed || _session != null) return;
 
     _isRestoringSession = true;
     _isLoading = true;
@@ -1151,36 +1155,38 @@ class LexiChatProvider extends ChangeNotifier {
   }
 
   Future<void> _loadSavedSessions() async {
-    if (_isDisposed) return;
+    if (_isDisposed) {
+      if (!_savedSessionsReady.isCompleted) _savedSessionsReady.complete();
+      return;
+    }
+
     _isLoadingSessions = true;
     notifyListeners();
 
     try {
       final rawString = await _secureStorage.read(key: _savedSessionsKey);
-      if (rawString == null || rawString.isEmpty) {
-        if (_isDisposed) return;
-        _isLoadingSessions = false;
-        notifyListeners();
-        return;
+      if (rawString != null && rawString.isNotEmpty) {
+        final raw = (jsonDecode(rawString) as List).cast<dynamic>();
+        _sessions
+          ..clear()
+          ..addAll(
+            raw
+                .map(
+                  (e) =>
+                      LexiSessionSummary.fromJson(Map<String, dynamic>.from(e)),
+                )
+                .toList(),
+          );
       }
-      final raw = (jsonDecode(rawString) as List).cast<dynamic>();
-      _sessions
-        ..clear()
-        ..addAll(
-          raw
-              .map(
-                (e) =>
-                    LexiSessionSummary.fromJson(Map<String, dynamic>.from(e)),
-              )
-              .toList(),
-        );
     } catch (e) {
       logWarn(_tag, 'Failed to load saved Lexi sessions: $e');
+    } finally {
+      if (!_savedSessionsReady.isCompleted) _savedSessionsReady.complete();
+      if (!_isDisposed) {
+        _isLoadingSessions = false;
+        notifyListeners();
+      }
     }
-
-    if (_isDisposed) return;
-    _isLoadingSessions = false;
-    notifyListeners();
   }
 
   Future<void> _saveSessions() async {
