@@ -393,6 +393,25 @@ class LexiChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<Map<String, String>> _recentConversationContext({
+    Set<String> excludeIds = const {},
+  }) {
+    final usable = _messages.where((message) {
+      if (excludeIds.contains(message.id)) return false;
+      if (message.content.trim().isEmpty) return false;
+      if (message.syncStatus == 'streaming') return false;
+      return message.role == 'user' || message.role == 'assistant';
+    }).toList();
+
+    final start = usable.length > 12 ? usable.length - 12 : 0;
+    return usable.sublist(start).map((message) {
+      return <String, String>{
+        'role': message.role,
+        'content': message.content.trim(),
+      };
+    }).toList();
+  }
+
   // ── Send Message ───────────────────────────────────────────────────────────
   Future<void> sendMessage(String text, {String? userId}) async {
     if (text.trim().isEmpty || _isSending) return;
@@ -428,6 +447,9 @@ class LexiChatProvider extends ChangeNotifier {
         learnerLevel: _learnerLevel,
         nativeLanguage: _nativeLanguage,
         idempotencyKey: requestId,
+        conversationHistory: _recentConversationContext(
+          excludeIds: {requestId},
+        ),
       );
 
       final idx = _messages.indexWhere((m) => m.id == requestId);
@@ -642,6 +664,9 @@ class LexiChatProvider extends ChangeNotifier {
         enableTts: _ttsEnabled,
         learnerLevel: _learnerLevel,
         nativeLanguage: _nativeLanguage,
+        conversationHistory: _recentConversationContext(
+          excludeIds: {requestId, placeholderId},
+        ),
       )) {
         switch (event) {
           case LexiStreamThinking():
@@ -857,6 +882,7 @@ class LexiChatProvider extends ChangeNotifier {
         enableTts: _ttsEnabled,
         learnerLevel: _learnerLevel,
         nativeLanguage: _nativeLanguage,
+        conversationHistory: _recentConversationContext(),
       );
 
       _messages.add(response);
@@ -981,6 +1007,7 @@ class LexiChatProvider extends ChangeNotifier {
     _ttsEnabled = soundEnabled;
     if (!_ttsEnabled) {
       _ttsPlayer.stop();
+      _webTts.stop();
     }
     notifyListeners();
   }
