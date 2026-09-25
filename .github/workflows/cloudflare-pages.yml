@@ -43,6 +43,10 @@ jobs:
         working-directory: flutter-app
         run: flutter pub get
 
+      - name: Stamp build revision
+        run: |
+          printf '{"sha":"%s"}\n' "$GITHUB_SHA" > flutter-app/web/build-info.json
+
       - name: Build Flutter web
         working-directory: flutter-app
         run: flutter build web --release
