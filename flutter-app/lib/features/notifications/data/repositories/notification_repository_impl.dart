@@ -39,7 +39,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
   @override
   Future<List<NotificationEntity>> getNotifications() async {
     final local = await _localDataSource.getNotifications();
-    if (_remoteDataSource == null) return local;
+    if (kIsWeb || _remoteDataSource == null) return local;
 
     try {
       final remote = await _remoteDataSource.getNotifications();
@@ -74,10 +74,12 @@ class NotificationRepositoryImpl implements NotificationRepository {
   @override
   Future<void> markAsRead(String notificationId) async {
     await _localDataSource.markAsRead(notificationId);
-    try {
-      await _remoteDataSource?.markAsRead(notificationId);
-    } catch (e) {
-      debugPrint('Remote mark notification read failed: $e');
+    if (!kIsWeb) {
+      try {
+        await _remoteDataSource?.markAsRead(notificationId);
+      } catch (e) {
+        debugPrint('Remote mark notification read failed: $e');
+      }
     }
     await _refreshStreams();
   }
@@ -85,10 +87,12 @@ class NotificationRepositoryImpl implements NotificationRepository {
   @override
   Future<void> markAllAsRead() async {
     await _localDataSource.markAllAsRead();
-    try {
-      await _remoteDataSource?.markAllAsRead();
-    } catch (e) {
-      debugPrint('Remote mark all notifications read failed: $e');
+    if (!kIsWeb) {
+      try {
+        await _remoteDataSource?.markAllAsRead();
+      } catch (e) {
+        debugPrint('Remote mark all notifications read failed: $e');
+      }
     }
     await _refreshStreams();
   }
@@ -96,10 +100,12 @@ class NotificationRepositoryImpl implements NotificationRepository {
   @override
   Future<void> deleteNotification(String notificationId) async {
     await _localDataSource.deleteNotification(notificationId);
-    try {
-      await _remoteDataSource?.deleteNotification(notificationId);
-    } catch (e) {
-      debugPrint('Remote delete notification failed: $e');
+    if (!kIsWeb) {
+      try {
+        await _remoteDataSource?.deleteNotification(notificationId);
+      } catch (e) {
+        debugPrint('Remote delete notification failed: $e');
+      }
     }
     await _refreshStreams();
   }
@@ -107,10 +113,12 @@ class NotificationRepositoryImpl implements NotificationRepository {
   @override
   Future<void> deleteAllNotifications() async {
     await _localDataSource.deleteAllNotifications();
-    try {
-      await _remoteDataSource?.deleteAllNotifications();
-    } catch (e) {
-      debugPrint('Remote delete all notifications failed: $e');
+    if (!kIsWeb) {
+      try {
+        await _remoteDataSource?.deleteAllNotifications();
+      } catch (e) {
+        debugPrint('Remote delete all notifications failed: $e');
+      }
     }
     await _refreshStreams();
   }
