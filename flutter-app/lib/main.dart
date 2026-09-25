@@ -119,35 +119,33 @@ void main() async {
   debugPrint('Backend API base URL: ${ApiConfig.baseUrl}');
   debugPrint('AI service base URL: ${ApiConfig.aiServiceUrl}');
 
-  // Initialize Firebase
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    debugPrint('Firebase initialized successfully');
+  // The public web build is guest-only and does not use auth/push.
+  // Skip Firebase startup there to reduce first-load work.
+  if (!kIsWeb) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint('Firebase initialized successfully');
 
-    // Crashlytics: route Flutter framework errors to Crashlytics in release
-    if (!kIsWeb) {
       FlutterError.onError = kReleaseMode
           ? FirebaseCrashlytics.instance.recordFlutterFatalError
           : FlutterError.presentError;
-      // Also catch async errors thrown outside the Flutter widget tree
-    }
 
-    // Initialize Firebase Cloud Messaging
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    // Push notification permission should not block app startup
-    // so we delay it until after runApp()
-  } catch (e) {
-    debugPrint('Warning: Firebase initialization failed: $e');
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (e) {
+      debugPrint('Warning: Firebase initialization failed: $e');
+    }
   }
 
   // Initialize Dependency Injection (skip database on web)
   await LocalStateMigrationService().runIfNeeded();
   await di.initializeDependencies(skipDatabase: kIsWeb);
 
-  // Initialize local notifications early so Settings sync can schedule reliably.
-  await di.sl<NotificationService>().ensureInitialized();
+  // Native builds use scheduled/local notifications. Guest web does not.
+  if (!kIsWeb) {
+    await di.sl<NotificationService>().ensureInitialized();
+  }
 
   // Run startup tasks (health check, seeding). Keep non-blocking for first frame.
   if (!kIsWeb) {
@@ -222,11 +220,13 @@ void main() async {
 
   // Initialize Firebase Messaging and Deep Links after UI starts rendering
   WidgetsBinding.instance.addPostFrameCallback((_) async {
-    try {
-      await FirebaseMessagingService.instance.initialize();
-      debugPrint('Firebase Messaging initialized successfully');
-    } catch (e) {
-      debugPrint('Warning: Firebase Messaging initialization failed: $e');
+    if (!kIsWeb) {
+      try {
+        await FirebaseMessagingService.instance.initialize();
+        debugPrint('Firebase Messaging initialized successfully');
+      } catch (e) {
+        debugPrint('Warning: Firebase Messaging initialization failed: $e');
+      }
     }
     try {
       await DeepLinkService.instance.init();
@@ -408,7 +408,12 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                 : const AuthWrapper(),
             routes: {
               '/youtube': LearnerRoute.builder(
-                (context) => const YouTubeExploreScreen(),
+                (context) => kIsWeb
+                    ? const LexiChatPage(
+                        initialPrompt:
+                            'Hãy gợi ý cho mình một bài luyện tiếng Anh kiểu video: chọn một chủ đề B1, cho 8 từ vựng, một đoạn hội thoại ngắn và 3 câu hỏi luyện tập.',
+                      )
+                    : const YouTubeExploreScreen(),
               ),
               '/youtube/player': LearnerRoute.builder((context) {
                 final video =
@@ -416,7 +421,12 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                 return YouTubePlayerScreen(video: video);
               }),
               '/news': LearnerRoute.builder(
-                (context) => const NewsListScreen(),
+                (context) => kIsWeb
+                    ? const LexiChatPage(
+                        initialPrompt:
+                            'Hãy cho mình một bản tin tiếng Anh ngắn trình độ B1 về một chủ đề đời sống, kèm từ vựng chính và 3 câu hỏi đọc hiểu.',
+                      )
+                    : const NewsListScreen(),
               ),
               '/news/detail': LearnerRoute.builder((context) {
                 final article =
@@ -444,7 +454,12 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                     : const TodayPlanPage(),
               ),
               '/practice-lab': LearnerRoute.builder(
-                (context) => const PracticeLabPage(),
+                (context) => kIsWeb
+                    ? const LexiChatPage(
+                        initialPrompt:
+                            'Hãy tạo một buổi luyện tiếng Anh 10 phút trình độ B1, gồm ngữ pháp, từ vựng và 5 câu hỏi tương tác. Hỏi từng câu một.',
+                      )
+                    : const PracticeLabPage(),
               ),
               '/mistake-notebook': LearnerRoute.builder(
                 (context) => const MistakeNotebookPage(),
@@ -499,7 +514,12 @@ class _LexiLingoAppState extends State<LexiLingoApp>
               ),
               // Phase 4: Podcast
               '/podcast': LearnerRoute.builder(
-                (context) => const PodcastExploreScreen(),
+                (context) => kIsWeb
+                    ? const LexiChatPage(
+                        initialPrompt:
+                            'Hãy tạo một bài luyện nghe tiếng Anh kiểu podcast ngắn trình độ B1: đoạn hội thoại khoảng 1 phút, từ vựng chính và 3 câu hỏi.',
+                      )
+                    : const PodcastExploreScreen(),
               ),
               '/podcast/detail': LearnerRoute.builder((context) {
                 final podcast =
@@ -517,7 +537,12 @@ class _LexiLingoAppState extends State<LexiLingoApp>
               }),
               // Phase 5: Books
               '/books': LearnerRoute.builder(
-                (context) => const BookLibraryScreen(),
+                (context) => kIsWeb
+                    ? const LexiChatPage(
+                        initialPrompt:
+                            'Hãy cho mình một đoạn đọc tiếng Anh ngắn trình độ B1 như một trang sách, giải thích 6 từ mới và hỏi 3 câu đọc hiểu.',
+                      )
+                    : const BookLibraryScreen(),
               ),
               // Phase 6: Lexi Chat
               '/lexi': LearnerRoute.builder((context) {
