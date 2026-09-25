@@ -300,10 +300,20 @@ export async function onRequest(context) {
     : (context.params.path || '');
   const rest = String(rawPath).replace(/^\/+/, '');
 
-  // Flutter base URL is /api/v1; intercept only the AI tutor routes here.
+  // Flutter base URL is /api/v1. The public web build is guest-only.
+  // Only Workers-AI tutor routes are live; never wait on the retired legacy origin.
   if (rest.startsWith('v1/lexi/')) {
     return handleLexi(context, rest.slice('v1/lexi/'.length));
   }
 
-  return proxyLegacyApi(context, rest);
+  return json(
+    {
+      error: {
+        code: 'LEGACY_API_DISABLED',
+        message:
+          'This guest web feature still depends on the retired LexiLingo backend.',
+      },
+    },
+    410,
+  );
 }
