@@ -77,6 +77,7 @@ class _FakeLexiChatRepository implements LexiChatRepository {
     String nativeLanguage = 'vi',
     String? storyContext,
     String? idempotencyKey,
+    List<Map<String, String>> conversationHistory = const [],
   }) async {
     sendCalls += 1;
     lastIdempotencyKey = idempotencyKey;
@@ -102,6 +103,7 @@ class _FakeLexiChatRepository implements LexiChatRepository {
     String learnerLevel = 'B1',
     String nativeLanguage = 'vi',
     String? storyContext,
+    List<Map<String, String>> conversationHistory = const [],
   }) {
     streamCalls += 1;
     lastStreamNativeLanguage = nativeLanguage;
