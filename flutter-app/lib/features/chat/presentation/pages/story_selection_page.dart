@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:lexilingo_app/core/widgets/cefr_badge.dart';
 import 'package:lexilingo_app/core/widgets/lottie_loading_widget.dart';
 import 'package:provider/provider.dart';
@@ -25,11 +26,13 @@ class _StorySelectionPageState extends State<StorySelectionPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<StoryProvider>();
-      provider.loadStories();
-      provider.loadCategories();
-    });
+    if (!kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final provider = context.read<StoryProvider>();
+        provider.loadStories();
+        provider.loadCategories();
+      });
+    }
   }
 
   @override
@@ -43,6 +46,10 @@ class _StorySelectionPageState extends State<StorySelectionPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final accent = AppColorRoles.primary(isDark);
+
+    if (kIsWeb) {
+      return _buildGuestConversationHub(theme, isDark, accent);
+    }
 
     return Scaffold(
       backgroundColor: isDark
@@ -139,6 +146,179 @@ class _StorySelectionPageState extends State<StorySelectionPage> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildGuestConversationHub(
+    ThemeData theme,
+    bool isDark,
+    Color accent,
+  ) {
+    final topics = <({IconData icon, String title, String subtitle, String prompt})>[
+      (
+        icon: Icons.coffee_rounded,
+        title: 'Gọi đồ ở quán cà phê',
+        subtitle: 'Luyện gọi món, hỏi giá và phản hồi tự nhiên.',
+        prompt:
+            'Hãy đóng vai nhân viên quán cà phê và luyện hội thoại tiếng Anh với mình ở trình độ B1. Chỉ nói tiếng Anh, mỗi lượt ngắn và sửa lỗi sau khi mình trả lời.',
+      ),
+      (
+        icon: Icons.flight_takeoff_rounded,
+        title: 'Sân bay & du lịch',
+        subtitle: 'Check-in, hỏi đường, hành lý và tình huống du lịch.',
+        prompt:
+            'Hãy đóng vai nhân viên sân bay và luyện hội thoại tiếng Anh với mình ở trình độ B1. Bắt đầu bằng một tình huống check-in tự nhiên và chỉ nói tiếng Anh.',
+      ),
+      (
+        icon: Icons.work_rounded,
+        title: 'Phỏng vấn xin việc',
+        subtitle: 'Trả lời câu hỏi phỏng vấn và cải thiện cách diễn đạt.',
+        prompt:
+            'Hãy làm nhà tuyển dụng và phỏng vấn mình bằng tiếng Anh ở trình độ B1-B2. Hỏi từng câu một, sau mỗi câu trả lời hãy sửa lỗi ngắn gọn rồi hỏi tiếp.',
+      ),
+      (
+        icon: Icons.people_alt_rounded,
+        title: 'Giao tiếp hằng ngày',
+        subtitle: 'Small talk, sở thích và những chủ đề đời thường.',
+        prompt:
+            'Hãy trò chuyện với mình bằng tiếng Anh như một người bạn. Chủ đề đời sống hằng ngày, trình độ B1, mỗi lượt một câu hỏi tự nhiên và sửa lỗi khi cần.',
+      ),
+      (
+        icon: Icons.restaurant_rounded,
+        title: 'Nhà hàng',
+        subtitle: 'Đặt bàn, gọi món và xử lý tình huống tại nhà hàng.',
+        prompt:
+            'Hãy đóng vai phục vụ nhà hàng và luyện hội thoại tiếng Anh với mình ở trình độ B1. Bắt đầu từ lúc mình bước vào nhà hàng, chỉ nói tiếng Anh.',
+      ),
+      (
+        icon: Icons.hotel_rounded,
+        title: 'Khách sạn',
+        subtitle: 'Đặt phòng, nhận phòng và yêu cầu hỗ trợ.',
+        prompt:
+            'Hãy đóng vai lễ tân khách sạn và luyện hội thoại tiếng Anh với mình ở trình độ B1. Bắt đầu bằng thủ tục check-in và chỉ nói tiếng Anh.',
+      ),
+    ];
+
+    void openTopic(String prompt) {
+      Navigator.of(context).pushNamed(
+        '/lexi',
+        arguments: <String, dynamic>{'starterPrompt': prompt},
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
+      appBar: AppBar(
+        toolbarHeight: 86,
+        automaticallyImplyLeading: false,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        titleSpacing: 16,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.forum_rounded,
+                color: theme.colorScheme.surface,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hội thoại',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColorRoles.textPrimary(isDark),
+                  ),
+                ),
+                Text(
+                  'Luyện tình huống thực tế với Trợ lý AI',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColorRoles.textSecondary(isDark),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 980),
+          child: GridView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: topics.length,
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 430,
+              mainAxisExtent: 190,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+            ),
+            itemBuilder: (context, index) {
+              final topic = topics[index];
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => openTopic(topic.prompt),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceDarkMuted : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: accent.withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(topic.icon, color: accent),
+                        ),
+                        const Spacer(),
+                        Text(
+                          topic.title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          topic.subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColorRoles.textSecondary(isDark),
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
