@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Wait for matching Pages deployment
-        run: sleep 180
+        run: sleep 120
 
       - name: Verify public shell
         run: |
@@ -103,7 +103,7 @@ jobs:
 
       - name: Browser route smoke
         run: |
-          cat > /tmp/qa.js <<'EOF'
+          cat > qa.js <<'EOF'
           const { chromium } = require('playwright');
 
           (async () => {
@@ -153,4 +153,4 @@ jobs:
             process.exit(1);
           });
           EOF
-          node /tmp/qa.js
+          node qa.js
