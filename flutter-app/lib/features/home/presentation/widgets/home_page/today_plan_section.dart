@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:lexilingo_app/core/theme/app_theme.dart';
 import 'package:lexilingo_app/core/theme/app_tactile_theme.dart';
@@ -26,7 +27,12 @@ class _TodayPlanSectionState extends State<TodayPlanSection> {
   @override
   void initState() {
     super.initState();
-    _loadVocabularyStats();
+    if (kIsWeb) {
+      _dueVocabularyCount = 0;
+      _isLoadingVocabulary = false;
+    } else {
+      _loadVocabularyStats();
+    }
   }
 
   Future<void> _loadVocabularyStats() async {
