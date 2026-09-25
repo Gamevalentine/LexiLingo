@@ -70,6 +70,7 @@ class _FakeLexiRepo implements LexiChatRepository {
     String nativeLanguage = 'vi',
     String? storyContext,
     String? idempotencyKey,
+    List<Map<String, String>> conversationHistory = const [],
   }) async {
     return LexiMessage(
       id: 'assistant-1',
@@ -102,6 +103,7 @@ class _FakeLexiRepo implements LexiChatRepository {
     String learnerLevel = 'B1',
     String nativeLanguage = 'vi',
     String? storyContext,
+    List<Map<String, String>> conversationHistory = const [],
   }) {
     return Stream.empty();
   }
