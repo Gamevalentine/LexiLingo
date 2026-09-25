@@ -416,6 +416,12 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                     : const YouTubeExploreScreen(),
               ),
               '/youtube/player': LearnerRoute.builder((context) {
+                if (kIsWeb) {
+                  return const LexiChatPage(
+                    initialPrompt:
+                        'Hãy tạo cho mình một bài luyện tiếng Anh kiểu video ở trình độ B1, có từ vựng, hội thoại và câu hỏi luyện tập.',
+                  );
+                }
                 final video =
                     ModalRoute.of(context)!.settings.arguments as YouTubeVideo;
                 return YouTubePlayerScreen(video: video);
@@ -429,11 +435,23 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                     : const NewsListScreen(),
               ),
               '/news/detail': LearnerRoute.builder((context) {
+                if (kIsWeb) {
+                  return const LexiChatPage(
+                    initialPrompt:
+                        'Hãy cho mình một bài đọc tiếng Anh ngắn trình độ B1, giải thích từ mới và hỏi 3 câu đọc hiểu.',
+                  );
+                }
                 final article =
                     ModalRoute.of(context)!.settings.arguments as NewsArticle;
                 return NewsDetailScreen(article: article);
               }),
               '/news/quiz': LearnerRoute.builder((context) {
+                if (kIsWeb) {
+                  return const LexiChatPage(
+                    initialPrompt:
+                        'Hãy kiểm tra đọc hiểu tiếng Anh của mình bằng 5 câu hỏi trình độ B1. Hỏi từng câu một và chấm sau mỗi câu.',
+                  );
+                }
                 final article =
                     ModalRoute.of(context)!.settings.arguments as NewsArticle;
                 return NewsQuizScreen(article: article);
@@ -462,7 +480,12 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                     : const PracticeLabPage(),
               ),
               '/mistake-notebook': LearnerRoute.builder(
-                (context) => const MistakeNotebookPage(),
+                (context) => kIsWeb
+                    ? const LexiChatPage(
+                        initialPrompt:
+                            'Hãy giúp mình rà lại các lỗi tiếng Anh thường gặp. Cho 5 câu sai ở trình độ B1 để mình sửa từng câu một, rồi giải thích ngắn.',
+                      )
+                    : const MistakeNotebookPage(),
               ),
               '/profile': LearnerRoute.builder(
                 (context) => kIsWeb
@@ -485,7 +508,9 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                     : const PaywallScreen(),
               ),
               '/offline-sync': LearnerRoute.builder(
-                (context) => const OfflineSyncCenterPage(),
+                (context) => kIsWeb
+                    ? const MainScreen(initialIndex: 0)
+                    : const OfflineSyncCenterPage(),
               ),
               '/placement-test': LearnerRoute.builder(
                 (context) => kIsWeb
@@ -510,7 +535,12 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                       ),
               ),
               '/vocabulary/word-of-day': LearnerRoute.builder(
-                (context) => const WordOfDayScreen(),
+                (context) => kIsWeb
+                    ? const LexiChatPage(
+                        initialPrompt:
+                            'Hãy chọn một từ tiếng Anh hữu ích cho hôm nay ở trình độ B1, giải thích nghĩa, phát âm, collocation và cho 3 câu ví dụ.',
+                      )
+                    : const WordOfDayScreen(),
               ),
               // Phase 4: Podcast
               '/podcast': LearnerRoute.builder(
@@ -522,11 +552,23 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                     : const PodcastExploreScreen(),
               ),
               '/podcast/detail': LearnerRoute.builder((context) {
+                if (kIsWeb) {
+                  return const LexiChatPage(
+                    initialPrompt:
+                        'Hãy tạo một bài luyện nghe kiểu podcast ngắn trình độ B1 và hỏi mình 3 câu sau đó.',
+                  );
+                }
                 final podcast =
                     ModalRoute.of(context)!.settings.arguments as Podcast;
                 return PodcastDetailScreen(podcast: podcast);
               }),
               '/podcast/player': LearnerRoute.builder((context) {
+                if (kIsWeb) {
+                  return const LexiChatPage(
+                    initialPrompt:
+                        'Hãy tạo một đoạn hội thoại tiếng Anh ngắn để mình luyện nghe, rồi kiểm tra mình bằng 3 câu hỏi.',
+                  );
+                }
                 final args =
                     ModalRoute.of(context)!.settings.arguments
                         as Map<String, dynamic>;
@@ -554,6 +596,9 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                 return LexiChatPage(initialPrompt: starterPrompt);
               }),
               '/reset-password': (context) {
+                if (kIsWeb) {
+                  return const LearnerTheme(child: MainScreen(initialIndex: 0));
+                }
                 final args = ModalRoute.of(context)?.settings.arguments;
                 String? token;
                 if (args is String) {
