@@ -62,12 +62,14 @@ class _MainScreenState extends State<MainScreen> {
     _getPage(_currentIndex);
     if (_currentIndex == 2) {
       _lexiWarmedUp = true;
-      _warmupAiModels();
+      if (!kIsWeb) _warmupAiModels();
     }
-    _triggerPreWarming();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showPendingStarterReward();
-    });
+    if (!kIsWeb) {
+      _triggerPreWarming();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showPendingStarterReward();
+      });
+    }
   }
 
   Future<void> _showPendingStarterReward() async {
@@ -160,7 +162,7 @@ class _MainScreenState extends State<MainScreen> {
   void _selectTab(int index) {
     if (index == 2 && !_lexiWarmedUp) {
       _lexiWarmedUp = true;
-      _warmupAiModels();
+      if (!kIsWeb) _warmupAiModels();
     }
     setState(() {
       _getPage(index); // build page lazily on first visit
