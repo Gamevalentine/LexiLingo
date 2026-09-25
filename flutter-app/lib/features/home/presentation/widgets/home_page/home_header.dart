@@ -31,9 +31,7 @@ class HomeHeader extends StatelessWidget {
           onNotificationTap: () {
             LearnerRoute.push(context, (_) => const NotificationsPage());
           },
-          onAvatarTap: () {
-            // Navigate to profile or settings
-          },
+          onAvatarTap: null,
         );
       },
     );
