@@ -31,6 +31,7 @@ class LexiChatRepositoryImpl implements LexiChatRepository {
     String nativeLanguage = 'vi',
     String? storyContext,
     String? idempotencyKey,
+    List<Map<String, String>> conversationHistory = const [],
   }) {
     return dataSource.sendMessage(
       userId: userId,
@@ -43,6 +44,7 @@ class LexiChatRepositoryImpl implements LexiChatRepository {
       nativeLanguage: nativeLanguage,
       storyContext: storyContext,
       idempotencyKey: idempotencyKey,
+      conversationHistory: conversationHistory,
     );
   }
 
@@ -149,6 +151,7 @@ class LexiChatRepositoryImpl implements LexiChatRepository {
     String learnerLevel = 'B1',
     String nativeLanguage = 'vi',
     String? storyContext,
+    List<Map<String, String>> conversationHistory = const [],
   }) {
     return dataSource.sendMessageStream(
       userId: userId,
@@ -160,6 +163,7 @@ class LexiChatRepositoryImpl implements LexiChatRepository {
       learnerLevel: learnerLevel,
       nativeLanguage: nativeLanguage,
       storyContext: storyContext,
+      conversationHistory: conversationHistory,
     );
   }
 }
