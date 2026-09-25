@@ -93,7 +93,7 @@ jobs:
     timeout-minutes: 18
     steps:
       - name: Wait for matching Pages deployment
-        run: sleep 180
+        run: sleep 5
 
       - name: Install Playwright
         run: |
