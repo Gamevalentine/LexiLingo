@@ -75,9 +75,21 @@ async function runTutorAI(context, payload) {
       : '',
   ].filter(Boolean).join('\n');
 
+  const rawHistory = Array.isArray(payload.conversation_history)
+    ? payload.conversation_history
+    : [];
+  const history = rawHistory
+    .slice(-12)
+    .map((item) => ({
+      role: item?.role === 'assistant' ? 'assistant' : 'user',
+      content: String(item?.content || '').trim().slice(0, 1800),
+    }))
+    .filter((item) => item.content.length > 0);
+
   const result = await context.env.AI.run(AI_MODEL, {
     messages: [
       { role: 'system', content: system },
+      ...history,
       { role: 'user', content: message },
     ],
   });
