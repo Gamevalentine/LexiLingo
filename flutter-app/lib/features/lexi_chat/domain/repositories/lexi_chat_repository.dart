@@ -20,6 +20,7 @@ abstract class LexiChatRepository {
     String nativeLanguage = 'vi',
     String? storyContext,
     String? idempotencyKey,
+    List<Map<String, String>> conversationHistory = const [],
   });
 
   /// Get message history for a session.
@@ -55,5 +56,6 @@ abstract class LexiChatRepository {
     String learnerLevel = 'B1',
     String nativeLanguage = 'vi',
     String? storyContext,
+    List<Map<String, String>> conversationHistory = const [],
   });
 }
