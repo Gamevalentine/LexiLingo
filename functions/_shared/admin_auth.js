@@ -1,3 +1,8 @@
+const BUILT_IN_SUPER_ADMINS = new Set([
+  "anhtsizoo00@gmail.com",
+  "trainingbot.ai2@gmail.com",
+]);
+
 function splitEmails(value) {
   return String(value || "")
     .split(",")
@@ -50,6 +55,8 @@ function roleForEmail(context, email) {
   const normalized = String(email || "").trim().toLowerCase();
   const superAdmins = splitEmails(context.env.SUPER_ADMIN_EMAILS);
   const admins = splitEmails(context.env.ADMIN_EMAILS);
+
+  if (BUILT_IN_SUPER_ADMINS.has(normalized)) return "super_admin";
   if (superAdmins.includes(normalized)) return "super_admin";
   if (admins.includes(normalized)) return "admin";
   return null;
