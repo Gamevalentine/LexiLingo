@@ -1,8 +1,5 @@
 import React, { useState } from "react";
-import {
-  bulkImportCourses,
-  extractPdfText,
-} from "../lib/adminApi";
+import { bulkImportCourses } from "../lib/adminApi";
 
 type ImportTab = "text" | "json" | "csv";
 
@@ -341,22 +338,6 @@ export const CourseImportModal = ({
     }
     setParseError(null);
 
-    if (ext === "pdf") {
-      try {
-        const response = await extractPdfText(file);
-        setTextInput(response.data?.text ?? "");
-        setTab("text");
-        setPreview(null);
-        setResult(null);
-      } catch (err: any) {
-        setParseError(err?.message || "Không thể trích xuất nội dung PDF");
-        setTextInput("");
-        setPreview(null);
-        setResult(null);
-      }
-      return;
-    }
-
     const reader = new FileReader();
     reader.onload = (ev) => {
       const content = ev.target?.result as string;
@@ -410,11 +391,11 @@ export const CourseImportModal = ({
         <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
           <label className="ghost-button small" style={{ cursor: "pointer" }}>
             Tải file lên
-            <input type="file" accept=".txt,.md,.json,.csv,.pdf" onChange={handleFileUpload} style={{ display: "none" }} />
+            <input type="file" accept=".txt,.md,.json,.csv" onChange={handleFileUpload} style={{ display: "none" }} />
           </label>
           <button className="ghost-button small" onClick={loadSample}>Xem mẫu</button>
           <span style={{ fontSize: 12, color: "var(--muted)" }}>
-            Hỗ trợ: .txt, .md, .json, .csv, .pdf
+            Hỗ trợ: .txt, .md, .json, .csv
           </span>
         </div>
 

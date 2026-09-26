@@ -1,346 +1,204 @@
 import React, { useEffect, useState } from "react";
+import { Bot, MessageSquareText, Save, SlidersHorizontal } from "lucide-react";
 import { SectionHeader } from "../components/SectionHeader";
-import { StatCard } from "../components/StatCard";
-import { StatusPill } from "../components/StatusPill";
-import { useI18n } from "../lib/i18n";
 import { authStore } from "../lib/auth";
 import { getAiConfig, updateAiConfig } from "../lib/healthApi";
-import { Bot, Zap, Key } from "lucide-react";
 
-interface AiChatConfig {
-  gemini_api_key?: string;
-  gemini_model: string;
+type TutorConfig = {
+  model_name: string;
   temperature: number;
   max_tokens: number;
   top_p: number;
-  top_k: number;
-  use_mongodb: boolean;
+  chat_memory_turns: number;
   enable_voice: boolean;
   enable_grammar: boolean;
   enable_topic: boolean;
-  chat_memory_turns: number;
-}
+  system_prompt: string;
+};
+
+const fallback: TutorConfig = {
+  model_name: "@cf/meta/llama-3.1-8b-instruct-fast",
+  temperature: 0.7,
+  max_tokens: 1200,
+  top_p: 0.9,
+  chat_memory_turns: 12,
+  enable_voice: true,
+  enable_grammar: true,
+  enable_topic: true,
+  system_prompt: "",
+};
 
 export const AiChatSettingsPage = () => {
-  const { t } = useI18n();
-  const [config, setConfig] = useState<AiChatConfig | null>(null);
+  const [config, setConfig] = useState<TutorConfig>(fallback);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchConfig();
-  }, []);
-
-  const fetchConfig = async () => {
+  const load = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const response = await getAiConfig(authStore.accessToken ?? undefined);
-      const data = await response.json();
-      // Backend returns flat AiConfig object; remap model_name → gemini_model
-      if (data && data.model_name) {
-        setConfig({
-          ...getDefaultConfig(),
-          ...data,
-          gemini_model: data.gemini_model ?? data.model_name,
-        });
-      } else {
-        setConfig(getDefaultConfig());
-      }
-    } catch (error) {
-      console.error("Failed to fetch AI config:", error);
-      setConfig(getDefaultConfig());
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.error?.message || body?.message || "Không tải được cấu hình AI.");
+      setConfig({ ...fallback, ...body });
+    } catch (err: any) {
+      setError(err?.message || "Không tải được cấu hình AI.");
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultConfig = (): AiChatConfig => ({
-    gemini_model: "gemini-2.0-flash-exp",
-    temperature: 0.7,
-    max_tokens: 2048,
-    top_p: 0.9,
-    top_k: 40,
-    use_mongodb: true,
-    enable_voice: true,
-    enable_grammar: true,
-    enable_topic: true,
-    chat_memory_turns: 10,
-  });
+  useEffect(() => {
+    void load();
+  }, []);
 
-  const handleSave = async () => {
-    if (!config) return;
+  const save = async () => {
     setSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
+    setError(null);
+    setMessage(null);
     try {
-      const payload = { ...config, model_name: config.gemini_model };
-      const response = await updateAiConfig(payload, authStore.accessToken ?? undefined);
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || response.statusText);
-      }
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 4000);
-    } catch (error: any) {
-      setSaveError(error.message || t.common.saveFailed);
+      const response = await updateAiConfig(config, authStore.accessToken ?? undefined);
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.error?.message || body?.message || "Lưu thất bại.");
+      setConfig({ ...fallback, ...body });
+      setMessage("Đã lưu. Lexi sẽ dùng cấu hình mới cho các tin nhắn tiếp theo.");
+    } catch (err: any) {
+      setError(err?.message || "Lưu thất bại.");
     } finally {
       setSaving(false);
     }
   };
 
-  const updateConfig = <K extends keyof AiChatConfig>(key: K, value: AiChatConfig[K]) => {
-    if (!config) return;
-    setConfig({ ...config, [key]: value });
-  };
-
-  if (loading) return <div className="loading">{t.common.loading}</div>;
-  if (!config) return <div>{t.common.loadFailed}</div>;
+  if (loading) return <div className="loading">Đang tải cấu hình Lexi...</div>;
 
   return (
     <div className="stack">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <SectionHeader 
-          title={t.aiChat.title} 
-          description={t.aiChat.description} 
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <SectionHeader
+          title="Cấu hình Lexi AI"
+          description="Thay đổi prompt và cách Lexi trả lời mà không cần sửa source code."
         />
-        <button 
-          className="btn-primary" 
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? t.common.saving : t.common.save}
+        <button className="primary-button" onClick={save} disabled={saving}>
+          <Save size={16} />
+          {saving ? "Đang lưu..." : "Lưu cấu hình"}
         </button>
       </div>
 
-      {saveError && <div className="form-error">{saveError}</div>}
-      {saveSuccess && (
-        <div style={{ padding: "12px 16px", borderRadius: 10, background: "#d1fae5", border: "1px solid #10b981", color: "#065f46", fontSize: 14, fontWeight: 500 }}>
-          ✓ {t.common.success}
+      {error && <div className="form-error">{error}</div>}
+      {message && (
+        <div className="panel" style={{ padding: 14, background: "#ecfdf5", borderColor: "#a7f3d0", color: "#065f46" }}>
+          {message}
         </div>
       )}
 
-      {/* Quick Stats */}
-      <div className="card-grid">
-        <StatCard
-          label={t.aiChat.model}
-          value={config.gemini_model.split("-")[1] || "Flash"}
-          note={`Gemini ${config.gemini_model.includes("2.0") ? "2.0" : "1.5"}`}
-          accent="teal"
+      <div className="panel">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <MessageSquareText size={20} />
+          <h3 style={{ margin: 0 }}>System prompt</h3>
+        </div>
+        <textarea
+          rows={14}
+          value={config.system_prompt}
+          onChange={(e) => setConfig({ ...config, system_prompt: e.target.value })}
+          style={{ width: "100%", resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
+          placeholder="Mô tả cách Lexi phải dạy và phản hồi..."
         />
-        <StatCard
-          label={t.aiChat.temperature}
-          value={config.temperature.toFixed(2)}
-          note={t.aiChat.creativity}
-          accent="orange"
-        />
-        <StatCard
-          label={t.aiChat.maxTokens}
-          value={String(config.max_tokens)}
-          note={t.aiChat.responseLength}
-          accent="berry"
-        />
-        <StatCard
-          label={t.aiChat.features}
-          value={`${[config.enable_voice, config.enable_grammar, config.enable_topic].filter(Boolean).length}/3`}
-          note={t.aiChat.modulesEnabled}
-          accent="ink"
-        />
+        <div className="table-meta" style={{ marginTop: 8 }}>
+          Prompt này được nạp trực tiếp bởi Cloudflare Workers AI ở mỗi lượt chat.
+        </div>
       </div>
 
       <div className="grid-2">
-        {/* Gemini Model Settings */}
         <div className="panel">
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <Bot size={20} style={{ color: "var(--accent)" }} />
-            <h3 style={{ margin: 0 }}>{t.aiChat.modelSettings}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            <Bot size={20} />
+            <h3 style={{ margin: 0 }}>Model</h3>
           </div>
-          
-          <div className="form-field">
-            <label>{t.aiChat.model}</label>
-            <select 
-              value={config.gemini_model}
-              onChange={(e) => updateConfig("gemini_model", e.target.value)}
-              className="input"
+          <label>
+            Cloudflare Workers AI model
+            <select
+              value={config.model_name}
+              onChange={(e) => setConfig({ ...config, model_name: e.target.value })}
             >
-              <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
-              <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-              <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+              <option value="@cf/meta/llama-3.1-8b-instruct-fast">Llama 3.1 8B Instruct Fast</option>
             </select>
-          </div>
-
-          <div className="form-field">
-            <label>{t.aiChat.temperature} ({config.temperature})</label>
-            <input
-              type="range"
-              min="0"
-              max="2"
-              step="0.1"
-              value={config.temperature}
-              onChange={(e) => updateConfig("temperature", parseFloat(e.target.value))}
-              className="slider"
-            />
-            <small>{t.aiChat.temperatureHint}</small>
-          </div>
-
-          <div className="form-field">
-            <label>{t.aiChat.maxTokens}</label>
-            <input
-              type="number"
-              min="512"
-              max="8192"
-              value={config.max_tokens}
-              onChange={(e) => updateConfig("max_tokens", parseInt(e.target.value))}
-              className="input"
-            />
-          </div>
-
-          <div className="grid-2">
-            <div className="form-field">
-              <label>Top P ({config.top_p})</label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={config.top_p}
-                onChange={(e) => updateConfig("top_p", parseFloat(e.target.value))}
-                className="slider"
-              />
-            </div>
-            <div className="form-field">
-              <label>Top K ({config.top_k})</label>
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={config.top_k}
-                onChange={(e) => updateConfig("top_k", parseInt(e.target.value))}
-                className="input"
-              />
-            </div>
-          </div>
+          </label>
+          <p className="table-meta" style={{ marginTop: 10 }}>
+            Giai đoạn này chỉ bật model đang được hệ thống kiểm thử ổn định.
+          </p>
         </div>
 
-        {/* Features & Integrations */}
         <div className="panel">
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <Zap size={20} style={{ color: "var(--accent)" }} />
-            <h3 style={{ margin: 0 }}>{t.aiChat.features}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            <SlidersHorizontal size={20} />
+            <h3 style={{ margin: 0 }}>Cách trả lời</h3>
           </div>
 
-          <div className="pill-grid">
-            <div className="pill-item">
-              <div>
-                <div className="pill-title">{t.aiChat.voiceSupport}</div>
-                <div className="pill-desc">{t.aiChat.voiceDesc}</div>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={config.enable_voice}
-                  onChange={(e) => updateConfig("enable_voice", e.target.checked)}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
+          <label>
+            Temperature: {config.temperature.toFixed(1)}
+            <input
+              type="range"
+              min={0}
+              max={1.5}
+              step={0.1}
+              value={config.temperature}
+              onChange={(e) => setConfig({ ...config, temperature: Number(e.target.value) })}
+            />
+          </label>
 
-            <div className="pill-item">
-              <div>
-                <div className="pill-title">{t.aiChat.grammarCheck}</div>
-                <div className="pill-desc">{t.aiChat.grammarDesc}</div>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={config.enable_grammar}
-                  onChange={(e) => updateConfig("enable_grammar", e.target.checked)}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-
-            <div className="pill-item">
-              <div>
-                <div className="pill-title">{t.aiChat.topicAnalysis}</div>
-                <div className="pill-desc">{t.aiChat.topicDesc}</div>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={config.enable_topic}
-                  onChange={(e) => updateConfig("enable_topic", e.target.checked)}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-
-            <div className="pill-item">
-              <div>
-                <div className="pill-title">{t.aiChat.mongodb}</div>
-                <div className="pill-desc">{t.aiChat.mongodbDesc}</div>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={config.use_mongodb}
-                  onChange={(e) => updateConfig("use_mongodb", e.target.checked)}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-
-          <div className="form-field" style={{ marginTop: 16 }}>
-            <label>{t.aiChat.chatMemory}</label>
+          <label>
+            Max tokens
             <input
               type="number"
-              min="0"
-              max="50"
-              value={config.chat_memory_turns}
-              onChange={(e) => updateConfig("chat_memory_turns", parseInt(e.target.value))}
-              className="input"
+              min={256}
+              max={4096}
+              value={config.max_tokens}
+              onChange={(e) => setConfig({ ...config, max_tokens: Number(e.target.value) })}
             />
-            <small>{t.aiChat.chatMemoryHint}</small>
-          </div>
+          </label>
+
+          <label>
+            Số lượt hội thoại được nhớ
+            <input
+              type="number"
+              min={0}
+              max={30}
+              value={config.chat_memory_turns}
+              onChange={(e) => setConfig({ ...config, chat_memory_turns: Number(e.target.value) })}
+            />
+          </label>
         </div>
       </div>
 
-      {/* API Key Configuration */}
       <div className="panel">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <Key size={20} style={{ color: "var(--accent)" }} />
-          <h3 style={{ margin: 0 }}>{t.aiChat.apiKeyConfig}</h3>
-        </div>
-        
-        <div className="form-field">
-          <label>{t.aiChat.geminiApiKey}</label>
-          <div style={{ display: "flex", gap: 8 }}>
+        <h3 style={{ marginTop: 0 }}>Tính năng</h3>
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+          <label className="checkbox">
             <input
-              type={showApiKey ? "text" : "password"}
-              value={config.gemini_api_key || ""}
-              onChange={(e) => updateConfig("gemini_api_key", e.target.value)}
-              placeholder="AIza..." 
-              className="input"
-              style={{ flex: 1 }}
+              type="checkbox"
+              checked={config.enable_voice}
+              onChange={(e) => setConfig({ ...config, enable_voice: e.target.checked })}
             />
-            <button 
-              type="button"
-              onClick={() => setShowApiKey(!showApiKey)}
-              className="btn-secondary"
-              style={{ minWidth: 100 }}
-            >
-              {showApiKey ? t.aiChat.hide : t.aiChat.show}
-            </button>
-          </div>
-          <small style={{ color: "var(--muted)" }}>{t.aiChat.apiKeyHint}</small>
-        </div>
-
-        <div className="panel" style={{ padding: 12, background: "#EFF6FF", border: "1px solid #BFDBFE", marginTop: 12 }}>
-          <p style={{ margin: 0, fontSize: 13, color: "#1E40AF" }}>
-            💡 {t.aiChat.apiKeyNote}
-          </p>
+            Voice
+          </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={config.enable_grammar}
+              onChange={(e) => setConfig({ ...config, enable_grammar: e.target.checked })}
+            />
+            Sửa ngữ pháp
+          </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={config.enable_topic}
+              onChange={(e) => setConfig({ ...config, enable_topic: e.target.checked })}
+            />
+            Hội thoại theo chủ đề
+          </label>
         </div>
       </div>
     </div>

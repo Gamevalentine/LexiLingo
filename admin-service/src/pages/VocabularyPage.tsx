@@ -189,9 +189,9 @@ export const VocabularyPage = () => {
             onChange={(e) => setSearch(e.target.value)}
             style={{ flex: 1, minWidth: 200 }}
           />
-          <input type="file" accept=".csv,.pdf" ref={fileRef} onChange={handleBulkImport} style={{ display: "none" }} />
+          <input type="file" accept=".csv" ref={fileRef} onChange={handleBulkImport} style={{ display: "none" }} />
           <button className="ghost-button" onClick={() => fileRef.current?.click()} disabled={importing}>
-            {importing ? "Đang import..." : "Import CSV/PDF"}
+            {importing ? "Đang import..." : "Import CSV"}
           </button>
           <button className="ghost-button" onClick={handleExport} disabled={items.length === 0}>
             Export CSV

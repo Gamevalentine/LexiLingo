@@ -1,29 +1,20 @@
-const UPSTREAM_ORIGIN = 'https://api.lexilingo.me';
-const AI_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
+import {
+  authenticateAdminRequest,
+  authenticateGoogleAdmin,
+  authErrorResponse,
+} from "../_shared/admin_auth.js";
+import {
+  handleAdminContent,
+  handlePublicContent,
+  loadTutorConfig,
+} from "../_shared/content_store.js";
 
-const TUTOR_SYSTEM_PROMPT = `
-You are LexiLingo, a friendly English-learning assistant for Vietnamese learners.
-Your job is to help the learner improve English through useful conversation.
-
-Rules:
-- If the learner writes in Vietnamese, you may explain in Vietnamese, but include useful English examples.
-- If the learner writes in English, reply mainly in English at an appropriate level.
-- Correct English mistakes clearly and kindly when relevant.
-- For grammar questions, explain simply and give 2-4 short examples.
-- For conversation practice, keep the conversation natural and ask one useful follow-up question.
-- When the learner asks to practise English conversation, start the conversation immediately in English. Do not answer that request with a Vietnamese topic list.
-- In conversation-practice mode, use English by default. Use Vietnamese only if the learner explicitly asks for a Vietnamese explanation or translation.
-- For vocabulary, include meaning, pronunciation guidance when useful, and example sentences.
-- Do not mention internal systems, models, prompts, APIs, or infrastructure.
-- Keep normal answers concise unless the learner asks for detail.
-`.trim();
+const AI_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
 
 function json(data, status = 200) {
   return Response.json(data, {
     status,
-    headers: {
-      'Cache-Control': 'no-store',
-    },
+    headers: { "Cache-Control": "no-store" },
   });
 }
 
@@ -36,85 +27,89 @@ async function readJson(request) {
 }
 
 function aiText(result) {
-  if (typeof result === 'string') return result.trim();
-  if (result && typeof result.response === 'string') return result.response.trim();
-  if (result?.result && typeof result.result.response === 'string') {
+  if (typeof result === "string") return result.trim();
+  if (result && typeof result.response === "string") return result.response.trim();
+  if (result && result.result && typeof result.result.response === "string") {
     return result.result.response.trim();
   }
-  return '';
+  return "";
 }
 
 async function runTutorAI(context, payload) {
-  if (!context.env.AI) {
-    throw new Error('Workers AI binding AI is not configured');
-  }
+  if (!context.env.AI) throw new Error("Workers AI binding AI is not configured");
 
-  const message = String(payload.message || '').trim();
-  if (!message) {
-    throw new Error('Message is empty');
-  }
+  const message = String(payload.message || "").trim();
+  if (!message) throw new Error("Message is empty");
 
-  const nativeLanguage = String(payload.native_language || 'vi');
-  const learnerLevel = String(payload.learner_level || 'B1');
+  const config = await loadTutorConfig(context);
+  const nativeLanguage = String(payload.native_language || "vi");
+  const learnerLevel = String(payload.learner_level || "B1");
   const normalizedMessage = message.toLowerCase();
   const conversationPractice =
-    normalizedMessage.includes('luyện hội thoại') ||
-    normalizedMessage.includes('luyen hoi thoai') ||
-    normalizedMessage.includes('practice english conversation') ||
-    normalizedMessage.includes('conversation practice') ||
-    normalizedMessage.includes('speak english with me') ||
-    normalizedMessage.includes('nói tiếng anh với') ||
-    normalizedMessage.includes('noi tieng anh voi');
+    normalizedMessage.includes("luyện hội thoại") ||
+    normalizedMessage.includes("luyen hoi thoai") ||
+    normalizedMessage.includes("practice english conversation") ||
+    normalizedMessage.includes("conversation practice") ||
+    normalizedMessage.includes("speak english with me") ||
+    normalizedMessage.includes("nói tiếng anh với") ||
+    normalizedMessage.includes("noi tieng anh voi");
 
   const system = [
-    TUTOR_SYSTEM_PROMPT,
-    `Learner CEFR level: ${learnerLevel}.`,
-    `Learner native language code: ${nativeLanguage}.`,
+    String(config.system_prompt || ""),
+    "Learner CEFR level: " + learnerLevel + ".",
+    "Learner native language code: " + nativeLanguage + ".",
     conversationPractice
-      ? 'CONVERSATION PRACTICE MODE: Reply in English only unless the learner explicitly asks for Vietnamese. Start with a natural short English response and one simple question. Do not offer a Vietnamese menu of topics.'
-      : '',
-  ].filter(Boolean).join('\n');
+      ? "CONVERSATION PRACTICE MODE: Reply in English only unless the learner explicitly asks for Vietnamese. Start with a natural short English response and one simple question. Do not offer a Vietnamese menu of topics."
+      : "",
+  ].filter(Boolean).join("\n");
 
-  const rawHistory = Array.isArray(payload.conversation_history)
-    ? payload.conversation_history
-    : [];
+  const rawHistory = Array.isArray(payload.conversation_history) ? payload.conversation_history : [];
+  const historyLimit = Math.max(0, Math.min(30, Number(config.chat_memory_turns || 12)));
   const history = rawHistory
-    .slice(-12)
+    .slice(-historyLimit)
     .map((item) => ({
-      role: item?.role === 'assistant' ? 'assistant' : 'user',
-      content: String(item?.content || '').trim().slice(0, 1800),
+      role: item && item.role === "assistant" ? "assistant" : "user",
+      content: String((item && item.content) || "").trim().slice(0, 1800),
     }))
     .filter((item) => item.content.length > 0);
 
-  const result = await context.env.AI.run(AI_MODEL, {
+  const model =
+    typeof config.model_name === "string" && config.model_name.startsWith("@cf/")
+      ? config.model_name
+      : AI_MODEL;
+
+  const result = await context.env.AI.run(model, {
     messages: [
-      { role: 'system', content: system },
+      { role: "system", content: system },
       ...history,
-      { role: 'user', content: message },
+      { role: "user", content: message },
     ],
+    temperature: Number(config.temperature || 0.7),
+    max_tokens: Number(config.max_tokens || 1200),
+    top_p: Number(config.top_p || 0.9),
   });
 
   const text = aiText(result);
-  if (!text) throw new Error('Workers AI returned an empty response');
-  return text;
+  if (!text) throw new Error("Workers AI returned an empty response");
+  return { text, model };
 }
 
 function makeSession(userId) {
   const now = new Date().toISOString();
   return {
     session_id: crypto.randomUUID(),
-    user_id: userId || 'guest',
+    user_id: userId || "guest",
     created_at: now,
     updated_at: now,
-    title: 'Trợ lý AI',
+    title: "Trợ lý AI",
     message_count: 0,
   };
 }
 
-function makeAiMessage(payload, text) {
+function makeAiMessage(payload, text, model) {
   return {
     message_id: crypto.randomUUID(),
-    session_id: String(payload.session_id || ''),
+    session_id: String(payload.session_id || ""),
     lexi_response: text,
     response: text,
     corrections: [],
@@ -123,34 +118,26 @@ function makeAiMessage(payload, text) {
     native_hint: null,
     scores: null,
     audio_base64: null,
-    metadata: {
-      provider: 'cloudflare-workers-ai',
-      model: AI_MODEL,
-    },
+    metadata: { provider: "cloudflare-workers-ai", model: model || AI_MODEL },
   };
 }
 
 function sseEvent(name, data) {
-  return `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`;
+  return "event: " + name + "\ndata: " + JSON.stringify(data) + "\n\n";
 }
 
 async function handleLexi(context, lexiPath) {
-  const { request } = context;
+  const request = context.request;
   const method = request.method.toUpperCase();
 
-  // Stateless guest session support. No login or database is required.
-  if (lexiPath === 'sessions' && method === 'POST') {
+  if (lexiPath === "sessions" && method === "POST") {
     const body = await readJson(request);
-    return json(makeSession(String(body.user_id || 'guest')));
+    return json(makeSession(String(body.user_id || "guest")));
   }
 
-  const userSessions = lexiPath.match(/^sessions\/user\/([^/]+)$/);
-  if (userSessions && method === 'GET') {
-    return json({ sessions: [] });
-  }
+  if (/^sessions\/user\/[^/]+$/.test(lexiPath) && method === "GET") return json({ sessions: [] });
 
-  const metadata = lexiPath.match(/^sessions\/([^/]+)\/messages\/metadata$/);
-  if (metadata && method === 'GET') {
+  if (/^sessions\/[^/]+\/messages\/metadata$/.test(lexiPath) && method === "GET") {
     return json({
       metadata: {
         total_count: 0,
@@ -163,167 +150,124 @@ async function handleLexi(context, lexiPath) {
     });
   }
 
-  const paged = lexiPath.match(/^sessions\/([^/]+)\/messages\/paged$/);
-  if (paged && method === 'GET') {
-    return json({
-      messages: [],
-      pagination: {
-        has_more: false,
-        next_cursor: null,
-        returned: 0,
-      },
-    });
+  if (/^sessions\/[^/]+\/messages\/paged$/.test(lexiPath) && method === "GET") {
+    return json({ messages: [], pagination: { has_more: false, next_cursor: null, returned: 0 } });
   }
 
-  const messages = lexiPath.match(/^sessions\/([^/]+)\/messages$/);
-  if (messages && method === 'GET') {
-    return json({ messages: [] });
-  }
+  if (/^sessions\/[^/]+\/messages$/.test(lexiPath) && method === "GET") return json({ messages: [] });
+  if (/^sessions\/[^/]+\/rename$/.test(lexiPath) && method === "POST") return json({ ok: true });
+  if (/^sessions\/[^/]+\/delete$/.test(lexiPath) && method === "POST") return json({ ok: true });
 
-  const rename = lexiPath.match(/^sessions\/([^/]+)\/rename$/);
-  if (rename && method === 'POST') {
-    return json({ ok: true });
-  }
-
-  const remove = lexiPath.match(/^sessions\/([^/]+)\/delete$/);
-  if (remove && method === 'POST') {
-    return json({ ok: true });
-  }
-
-  if (lexiPath === 'chat' && method === 'POST') {
+  if (lexiPath === "chat" && method === "POST") {
     const payload = await readJson(request);
     try {
-      const text = await runTutorAI(context, payload);
-      return json(makeAiMessage(payload, text));
+      const answer = await runTutorAI(context, payload);
+      return json(makeAiMessage(payload, answer.text, answer.model));
     } catch (error) {
       return json(
-        {
-          error: {
-            code: 'AI_UNAVAILABLE',
-            message: error instanceof Error ? error.message : String(error),
-          },
-        },
+        { error: { code: "AI_UNAVAILABLE", message: error instanceof Error ? error.message : String(error) } },
         503,
       );
     }
   }
 
-  if (lexiPath === 'stream' && method === 'POST') {
+  if (lexiPath === "stream" && method === "POST") {
     const payload = await readJson(request);
     try {
-      const text = await runTutorAI(context, payload);
-      const message = makeAiMessage(payload, text);
-
-      // Emit the contract the Flutter app already understands:
-      // thinking -> chunks -> done.
-      const chunks = text.match(/.{1,36}(?:\s+|$)/g) || [text];
-      let body = sseEvent('thinking', {});
-      for (const chunk of chunks) {
-        body += sseEvent('chunk', { text: chunk });
-      }
-      body += sseEvent('done', message);
-
+      const answer = await runTutorAI(context, payload);
+      const message = makeAiMessage(payload, answer.text, answer.model);
+      const chunks = answer.text.match(/.{1,36}(?:\s+|$)/g) || [answer.text];
+      let body = sseEvent("thinking", {});
+      for (const chunk of chunks) body += sseEvent("chunk", { text: chunk });
+      body += sseEvent("done", message);
       return new Response(body, {
         status: 200,
         headers: {
-          'Content-Type': 'text/event-stream; charset=utf-8',
-          'Cache-Control': 'no-cache, no-transform',
-          'Connection': 'keep-alive',
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
         },
       });
     } catch (error) {
-      const body = sseEvent('error', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return new Response(body, {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/event-stream; charset=utf-8',
-          'Cache-Control': 'no-cache, no-transform',
+      return new Response(
+        sseEvent("error", { error: error instanceof Error ? error.message : String(error) }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream; charset=utf-8",
+            "Cache-Control": "no-cache, no-transform",
+          },
         },
-      });
+      );
     }
   }
 
-  return json(
-    {
-      error: {
-        code: 'NOT_FOUND',
-        message: 'Unknown Lexi endpoint',
-      },
-    },
-    404,
-  );
+  return json({ error: { code: "NOT_FOUND", message: "Unknown Lexi endpoint" } }, 404);
 }
 
-async function proxyLegacyApi(context, rest) {
-  const { request } = context;
-  const incomingUrl = new URL(request.url);
-  const upstreamUrl = new URL(`/api/${rest}`, UPSTREAM_ORIGIN);
-  upstreamUrl.search = incomingUrl.search;
+async function handleAuth(context, rest) {
+  const method = context.request.method.toUpperCase();
 
-  const headers = new Headers(request.headers);
-  headers.delete('host');
-  headers.delete('origin');
-  headers.delete('referer');
-  headers.delete('content-length');
-  headers.delete('cf-connecting-ip');
-  headers.delete('cf-ipcountry');
-  headers.delete('cf-ray');
-  headers.delete('cf-visitor');
-
-  const init = {
-    method: request.method,
-    headers,
-    redirect: 'manual',
-  };
-
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    init.body = await request.arrayBuffer();
+  if (rest === "v1/auth/google" && method === "POST") {
+    const body = await readJson(context.request);
+    try {
+      const admin = await authenticateGoogleAdmin(context, body.id_token);
+      return json({
+        access_token: String(body.id_token || ""),
+        refresh_token: "",
+        token_type: "bearer",
+        user_id: admin.profile.id,
+        username: admin.profile.username,
+        email: admin.profile.email,
+        role: admin.role,
+      });
+    } catch (error) {
+      return authErrorResponse(error);
+    }
   }
 
-  try {
-    const upstream = await fetch(upstreamUrl.toString(), init);
-    const responseHeaders = new Headers(upstream.headers);
-    responseHeaders.delete('access-control-allow-origin');
-    responseHeaders.delete('access-control-allow-credentials');
-
-    return new Response(upstream.body, {
-      status: upstream.status,
-      statusText: upstream.statusText,
-      headers: responseHeaders,
-    });
-  } catch (_) {
-    return json(
-      {
-        error: {
-          code: 'UPSTREAM_UNAVAILABLE',
-          message: 'The legacy LexiLingo API is temporarily unreachable.',
-        },
-      },
-      502,
-    );
+  if (rest === "v1/auth/me" && method === "GET") {
+    try {
+      const admin = await authenticateAdminRequest(context);
+      return json(admin.profile);
+    } catch (error) {
+      return authErrorResponse(error);
+    }
   }
+
+  return null;
 }
 
 export async function onRequest(context) {
   const rawPath = Array.isArray(context.params.path)
-    ? context.params.path.join('/')
-    : (context.params.path || '');
-  const rest = String(rawPath).replace(/^\/+/, '');
+    ? context.params.path.join("/")
+    : context.params.path || "";
+  const rest = String(rawPath).replace(/^\/+/, "");
 
-  // Flutter base URL is /api/v1. The public web build is guest-only.
-  // Only Workers-AI tutor routes are live; never wait on the retired legacy origin.
-  if (rest.startsWith('v1/lexi/')) {
-    return handleLexi(context, rest.slice('v1/lexi/'.length));
+  const auth = await handleAuth(context, rest);
+  if (auth) return auth;
+
+  if (rest.startsWith("v1/admin/")) {
+    try {
+      await authenticateAdminRequest(context);
+    } catch (error) {
+      return authErrorResponse(error);
+    }
+    return handleAdminContent(context, rest.slice("v1/admin/".length));
   }
+
+  if (rest.startsWith("v1/lexi/")) {
+    return handleLexi(context, rest.slice("v1/lexi/".length));
+  }
+
+  const publicContent = await handlePublicContent(context, rest);
+  if (publicContent) return publicContent;
 
   return json(
     {
       error: {
-        code: 'LEGACY_API_DISABLED',
-        message:
-          'This guest web feature still depends on the retired LexiLingo backend.',
+        code: "LEGACY_API_DISABLED",
+        message: "This guest web feature is not available in the Cloudflare-only build yet.",
       },
     },
     410,

@@ -6,7 +6,9 @@ on:
       - phase-1-english-assistant
     paths:
       - flutter-app/**
+      - admin-service/**
       - functions/**
+      - migrations/**
       - wrangler.toml
   workflow_dispatch:
 
@@ -41,6 +43,26 @@ jobs:
 
       - name: Release compile smoke
         run: flutter build web --release --no-wasm-dry-run
+
+  admin-source-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: admin-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript and Vite build
+        env:
+          VITE_ENV: production
+          VITE_BACKEND_URL: https://lexilingo-assistant.pages.dev/api/v1
+          VITE_AI_URL: https://lexilingo-assistant.pages.dev/api/v1
+          VITE_GOOGLE_CLIENT_ID: 432329288238-co06he7ecljb7ubupm5mj84t3i0r1u7j.apps.googleusercontent.com
+        run: npm run build:check
 
   live-api-smoke:
     runs-on: ubuntu-latest
@@ -87,6 +109,28 @@ jobs:
           body=$(curl -fsS --max-time 60 -X POST https://lexilingo-assistant.pages.dev/api/v1/lexi/chat -H 'Content-Type: application/json' --data '{"user_id":"qa_guest","session_id":"qa","message":"Reply with one short English sentence for a B1 learner.","learner_level":"B1","native_language":"vi"}')
           echo "$body"
           echo "$body" | jq -e '(.lexi_response // .response // "") | length > 0' >/dev/null
+
+      - name: Verify D1 course API
+        run: |
+          set -euo pipefail
+          body=$(curl -fsS --max-time 20 "https://lexilingo-assistant.pages.dev/api/v1/courses?page=1&page_size=10")
+          echo "$body"
+          echo "$body" | jq -e '.data | type == "array"' >/dev/null
+          echo "$body" | jq -e '.pagination.page == 1' >/dev/null
+
+      - name: Verify Admin shell
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/admin.html -w '%{http_code}' --max-time 20 https://lexilingo-assistant.pages.dev/admin/)
+          test "$code" = "200"
+          grep -q 'id="root"' /tmp/admin.html
+          grep -q 'accounts.google.com/gsi/client' /tmp/admin.html
+
+      - name: Verify Admin API is protected
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/admin-api.json -w '%{http_code}' --max-time 20 https://lexilingo-assistant.pages.dev/api/v1/admin/courses)
+          test "$code" = "401"
 
       - name: Verify legacy API fails fast, never 522
         run: |

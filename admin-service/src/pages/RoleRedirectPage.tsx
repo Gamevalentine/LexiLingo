@@ -5,8 +5,9 @@ import { useAuth } from "../components/AuthProvider";
 export const RoleRedirectPage = () => {
   const { role } = useAuth();
 
-  if (role === "super_admin") return <Navigate to="/super" replace />;
-  if (role === "admin") return <Navigate to="/admin" replace />;
+  if (role === "super_admin" || role === "admin") {
+    return <Navigate to="/admin/courses" replace />;
+  }
 
   return <Navigate to="/no-access" replace />;
 };

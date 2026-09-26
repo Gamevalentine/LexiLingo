@@ -200,7 +200,7 @@ export const apiFetch = async <T>(
     if (refreshed) {
       response = await makeRequest(authStore.accessToken);
     } else {
-      window.location.href = "/login";
+      window.location.href = "/admin/#/login";
       throw new ApiError("Session expired. Please log in again.", 401);
     }
   }
@@ -213,7 +213,7 @@ export const apiFetch = async <T>(
   if (!response.ok) {
     if (response.status === 401) {
       authStore.clear();
-      window.location.href = "/login";
+      window.location.href = "/admin/#/login";
     }
     
     let message = "Request failed";
