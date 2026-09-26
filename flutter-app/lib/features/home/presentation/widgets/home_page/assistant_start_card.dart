@@ -177,7 +177,7 @@ class AssistantStartCard extends StatelessWidget {
                       icon: Icons.mic_rounded,
                       label: 'home.assistantPronunciation'.tr(),
                       onTap: () =>
-                          Navigator.pushNamed(context, '/practice-lab'),
+                          Navigator.pushNamed(context, '/voice-practice'),
                     ),
                   ],
                 );

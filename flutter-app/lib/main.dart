@@ -61,6 +61,7 @@ import 'package:lexilingo_app/features/home/presentation/pages/today_plan_page.d
 import 'package:lexilingo_app/features/voice/presentation/providers/voice_provider.dart';
 import 'package:lexilingo_app/features/voice/presentation/providers/tts_settings_provider.dart';
 import 'package:lexilingo_app/features/voice/presentation/providers/speech_recognition_provider.dart';
+import 'package:lexilingo_app/features/voice/presentation/screens/voice_practice_screen.dart';
 import 'package:lexilingo_app/features/progress/presentation/providers/streak_provider.dart';
 import 'package:lexilingo_app/features/progress/presentation/providers/daily_challenges_provider.dart';
 import 'package:lexilingo_app/features/social/presentation/screens/social_screen.dart';
@@ -478,6 +479,9 @@ class _LexiLingoAppState extends State<LexiLingoApp>
                             'Hãy tạo một buổi luyện tiếng Anh 10 phút trình độ B1, gồm ngữ pháp, từ vựng và 5 câu hỏi tương tác. Hỏi từng câu một.',
                       )
                     : const PracticeLabPage(),
+              ),
+              '/voice-practice': LearnerRoute.builder(
+                (context) => const VoicePracticeScreen(),
               ),
               '/mistake-notebook': LearnerRoute.builder(
                 (context) => kIsWeb
