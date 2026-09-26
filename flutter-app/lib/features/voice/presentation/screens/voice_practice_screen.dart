@@ -12,6 +12,8 @@ import 'package:record/record.dart';
 import 'package:lexilingo_app/core/theme/app_theme.dart';
 import 'package:lexilingo_app/core/widgets/lottie_animation_widget.dart';
 import 'package:lexilingo_app/features/voice/presentation/providers/voice_provider.dart';
+import 'package:lexilingo_app/features/voice/data/datasources/speech_recognition_service.dart';
+import 'package:lexilingo_app/features/voice/data/datasources/speech_synthesis_service.dart';
 import 'package:lexilingo_app/features/voice/presentation/widgets/record_button.dart';
 import 'package:lexilingo_app/features/voice/presentation/widgets/pronunciation_score_card.dart';
 
@@ -40,6 +42,15 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
   final TextEditingController _phraseController = TextEditingController();
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _player = AudioPlayer();
+  final WebSpeechSynthesis _webTts = WebSpeechSynthesis();
+
+  WebSpeechRecognition? _webSpeech;
+  StreamSubscription<WebSpeechResult>? _webSpeechSub;
+  Timer? _webTtsTimer;
+  String _webTranscript = '';
+  double? _webConfidence;
+  bool _webCompleting = false;
+  bool _hasPlayedExample = false;
 
   Timer? _recordingTimer;
   StreamSubscription<PlayerState>? _playerStateSub;
@@ -82,6 +93,12 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
   }
 
   Future<void> _checkPermission() async {
+    if (kIsWeb) {
+      if (!mounted) return;
+      setState(() => _hasRecorderPermission = WebSpeechRecognition.isSupported);
+      return;
+    }
+
     try {
       final hasPermission = await _recorder.hasPermission();
       if (!mounted) return;
@@ -96,6 +113,10 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
   void dispose() {
     _phraseController.dispose();
     _playerStateSub?.cancel();
+    _webSpeechSub?.cancel();
+    _webSpeech?.dispose();
+    _webTts.stop();
+    _webTtsTimer?.cancel();
     _recorder.dispose();
     _player.dispose();
     _recordingTimer?.cancel();
@@ -110,6 +131,11 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
 
     if (_isBusy) return;
     if (_isPlaying) _stopPlaying();
+
+    if (kIsWeb) {
+      await _startWebPronunciation();
+      return;
+    }
 
     if (!_hasRecorderPermission) {
       await _checkPermission();
@@ -161,8 +187,129 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
     }
   }
 
+  Future<void> _startWebPronunciation() async {
+    if (!WebSpeechRecognition.isSupported) {
+      _showError(
+        'Trình duyệt này chưa hỗ trợ nhận dạng giọng nói. Hãy dùng Chrome hoặc Edge để luyện phát âm.',
+      );
+      return;
+    }
+
+    await _webSpeechSub?.cancel();
+    _webSpeech?.dispose();
+    _webSpeech = WebSpeechRecognition();
+    _webTranscript = '';
+    _webConfidence = null;
+    _webCompleting = false;
+
+    final provider = context.read<VoiceProvider>();
+    provider.clearResults();
+    provider.startRecording();
+
+    setState(() {
+      _isRecording = true;
+      _isProcessing = false;
+      _recordingDuration = Duration.zero;
+    });
+
+    _recordingTimer?.cancel();
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      final duration = _recordingDuration + const Duration(seconds: 1);
+      setState(() => _recordingDuration = duration);
+      provider.updateRecordingDuration(duration);
+      if (duration >= _maxRecordingDuration) {
+        timer.cancel();
+        unawaited(_stopWebPronunciation());
+      }
+    });
+
+    final stream = _webSpeech!.startListening(
+      language: 'en-US',
+      continuous: false,
+    );
+
+    _webSpeechSub = stream.listen(
+      (result) {
+        if (!mounted) return;
+        final transcript = result.transcript.trim();
+        if (transcript.isNotEmpty) {
+          _webTranscript = transcript;
+          if (result.confidence > 0) {
+            _webConfidence = result.confidence;
+          }
+        }
+        if (result.isFinal && transcript.isNotEmpty) {
+          unawaited(_completeWebPronunciation());
+        }
+      },
+      onError: (Object error) {
+        if (!mounted) return;
+        _recordingTimer?.cancel();
+        _webSpeech?.stopListening();
+        setState(() {
+          _isRecording = false;
+          _isProcessing = false;
+        });
+        provider.resetState();
+        _showError(error.toString());
+      },
+    );
+  }
+
+  Future<void> _stopWebPronunciation() async {
+    if (!_isRecording || _webCompleting) return;
+    _webSpeech?.stopListening();
+    _recordingTimer?.cancel();
+
+    if (_webTranscript.trim().isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _isRecording = false;
+        _isProcessing = false;
+      });
+      context.read<VoiceProvider>().resetState();
+      _showError('Không nghe rõ nội dung. Hãy nói lại gần microphone hơn.');
+      return;
+    }
+
+    await _completeWebPronunciation();
+  }
+
+  Future<void> _completeWebPronunciation() async {
+    if (_webCompleting || _webTranscript.trim().isEmpty) return;
+    _webCompleting = true;
+    _recordingTimer?.cancel();
+    _webSpeech?.stopListening();
+
+    if (mounted) {
+      setState(() {
+        _isRecording = false;
+        _isProcessing = true;
+      });
+    }
+
+    try {
+      final provider = context.read<VoiceProvider>();
+      await provider.assessPronunciationFromTranscript(
+        transcript: _webTranscript,
+        targetText: _phraseController.text.trim(),
+        recognitionConfidence: _webConfidence,
+        language: widget.language,
+      );
+    } finally {
+      _webCompleting = false;
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
   Future<void> _stopRecording() async {
     if (!_isRecording) return;
+
+    if (kIsWeb) {
+      await _stopWebPronunciation();
+      return;
+    }
 
     _recordingTimer?.cancel();
     setState(() {
@@ -242,6 +389,27 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
       return;
     }
 
+    if (kIsWeb && WebSpeechSynthesis.isSupported) {
+      final text = _phraseController.text.trim();
+      setState(() => _isPreparingExample = true);
+      _webTts.speak(text, language: 'en-US', rate: 0.85);
+      _webTtsTimer?.cancel();
+      final wordCount = text
+          .split(RegExp(r'\s+'))
+          .where((word) => word.isNotEmpty)
+          .length;
+      final estimatedMs = (900 + wordCount * 520).clamp(1600, 9000).toInt();
+      setState(() {
+        _isPreparingExample = false;
+        _isPlaying = true;
+        _hasPlayedExample = true;
+      });
+      _webTtsTimer = Timer(Duration(milliseconds: estimatedMs), () {
+        if (mounted) setState(() => _isPlaying = false);
+      });
+      return;
+    }
+
     setState(() => _isPreparingExample = true);
 
     final provider = context.read<VoiceProvider>();
@@ -283,7 +451,12 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
   }
 
   void _stopPlaying() {
-    _player.stop();
+    _webTtsTimer?.cancel();
+    if (kIsWeb) {
+      _webTts.stop();
+    } else {
+      _player.stop();
+    }
     setState(() => _isPlaying = false);
     context.read<VoiceProvider>().onPlaybackComplete();
   }
@@ -294,11 +467,25 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
     setState(() {
       _phraseController.text = random;
       _lastRecordingAudioData = null;
+      _webTranscript = '';
+      _webConfidence = null;
+      _hasPlayedExample = false;
     });
     context.read<VoiceProvider>().clearResults();
   }
 
   Future<void> _retryAssessment() async {
+    if (kIsWeb && _webTranscript.trim().isNotEmpty) {
+      context.read<VoiceProvider>().resetState();
+      await context.read<VoiceProvider>().assessPronunciationFromTranscript(
+        transcript: _webTranscript,
+        targetText: _phraseController.text.trim(),
+        recognitionConfidence: _webConfidence,
+        language: widget.language,
+      );
+      return;
+    }
+
     final audioData = _lastRecordingAudioData;
     if (audioData == null || audioData.isEmpty) {
       _showError('voice.noRecordedAudioReturned'.tr());
@@ -384,7 +571,7 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
                 icon: Icons.volume_up,
                 label: 'voice.listen'.tr(),
                 active: _isPreparingExample || _isPlaying,
-                done: voiceProvider.lastAudioSynthesis != null,
+                done: _hasPlayedExample || voiceProvider.lastAudioSynthesis != null,
               ),
               _buildStepChip(
                 context,
@@ -392,7 +579,9 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
                 icon: Icons.mic,
                 label: 'voice.speak'.tr(),
                 active: _isRecording,
-                done: _lastRecordingAudioData != null,
+                done:
+                    _lastRecordingAudioData != null ||
+                    (kIsWeb && voiceProvider.lastTranscription != null),
               ),
               _buildStepChip(
                 context,
@@ -482,12 +671,18 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
                   : () {
                       _phraseController.clear();
                       _lastRecordingAudioData = null;
+                      _webTranscript = '';
+                      _webConfidence = null;
+                      _hasPlayedExample = false;
                       voiceProvider.clearResults();
                     },
             ),
           ),
           onChanged: (_) {
             _lastRecordingAudioData = null;
+            _webTranscript = '';
+            _webConfidence = null;
+            _hasPlayedExample = false;
             voiceProvider.clearResults();
           },
         ),
@@ -516,6 +711,9 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
                           setState(() {
                             _phraseController.text = phrase;
                             _lastRecordingAudioData = null;
+                            _webTranscript = '';
+                            _webConfidence = null;
+                            _hasPlayedExample = false;
                           });
                           voiceProvider.clearResults();
                         },
@@ -640,7 +838,19 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          if (!_hasRecorderPermission)
+          if (kIsWeb && !WebSpeechRecognition.isSupported)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'Trình duyệt này chưa hỗ trợ nhận dạng giọng nói. Hãy dùng Chrome hoặc Edge.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.errorDark,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          else if (!_hasRecorderPermission)
             ElevatedButton.icon(
               onPressed: _checkPermission,
               icon: const Icon(Icons.mic_off),
@@ -684,7 +894,10 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
 
   Widget _buildErrorCard(BuildContext context, VoiceProvider voiceProvider) {
     final canRetry =
-        _lastRecordingAudioData != null && !_isBusy && !_isRecording;
+        (_lastRecordingAudioData != null ||
+            (kIsWeb && _webTranscript.trim().isNotEmpty)) &&
+        !_isBusy &&
+        !_isRecording;
 
     return Container(
       width: double.infinity,
@@ -815,7 +1028,11 @@ class _VoicePracticeScreenState extends State<VoicePracticeScreen> {
                   PronunciationScoreCard(
                     score: voiceProvider.lastPronunciationScore!,
                     onTryAgain: () {
-                      setState(() => _lastRecordingAudioData = null);
+                      setState(() {
+                        _lastRecordingAudioData = null;
+                        _webTranscript = '';
+                        _webConfidence = null;
+                      });
                       voiceProvider.clearResults();
                     },
                     onListenExample: _playExample,

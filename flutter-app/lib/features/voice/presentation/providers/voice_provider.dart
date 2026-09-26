@@ -3,6 +3,7 @@ import 'package:lexilingo_app/core/error/failures.dart';
 import 'package:lexilingo_app/features/voice/domain/entities/audio_synthesis.dart';
 import 'package:lexilingo_app/features/voice/domain/entities/pronunciation_score.dart';
 import 'package:lexilingo_app/features/voice/domain/entities/transcription.dart';
+import 'package:lexilingo_app/features/voice/domain/services/pronunciation_transcript_scorer.dart';
 import 'package:lexilingo_app/features/voice/domain/usecases/assess_pronunciation_usecase.dart';
 import 'package:lexilingo_app/features/voice/domain/usecases/synthesize_speech_usecase.dart';
 import 'package:lexilingo_app/features/voice/domain/usecases/transcribe_audio_usecase.dart';
@@ -168,6 +169,54 @@ class VoiceProvider extends ChangeNotifier {
         return score;
       },
     );
+  }
+
+  /// Assess pronunciation directly from a browser speech transcript.
+  ///
+  /// This keeps the public web build independent from the retired voice
+  /// backend. It is a transcript-alignment estimate, not a phoneme-level
+  /// acoustic measurement, so it never fabricates phoneme errors.
+  Future<PronunciationScore?> assessPronunciationFromTranscript({
+    required String transcript,
+    required String targetText,
+    double? recognitionConfidence,
+    String? language,
+  }) async {
+    final cleanTarget = targetText.trim();
+    final cleanTranscript = transcript.trim();
+
+    if (cleanTarget.isEmpty) {
+      _errorMessage = 'Target text cannot be empty';
+      _state = VoiceState.error;
+      notifyListeners();
+      return null;
+    }
+
+    if (cleanTranscript.isEmpty) {
+      _errorMessage = 'No speech was recognized. Please try again.';
+      _state = VoiceState.error;
+      notifyListeners();
+      return null;
+    }
+
+    _state = VoiceState.processing;
+    _errorMessage = null;
+    notifyListeners();
+
+    final score = PronunciationTranscriptScorer.score(
+      transcript: cleanTranscript,
+      targetText: cleanTarget,
+      recognitionConfidence: recognitionConfidence,
+    );
+
+    _lastTranscription = Transcription(
+      text: cleanTranscript,
+      language: language,
+    );
+    _lastPronunciationScore = score;
+    _state = VoiceState.idle;
+    notifyListeners();
+    return score;
   }
 
   /// Clear last result
