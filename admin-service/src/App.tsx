@@ -41,6 +41,7 @@ const AppRoutes = () => {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/super" element={<Navigate to="/admin/courses" replace />} />
         <Route path="/no-access" element={<NoAccessPage />} />
 
         <Route element={<RequireAuth />}>

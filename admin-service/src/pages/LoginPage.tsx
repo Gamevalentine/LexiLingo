@@ -19,7 +19,7 @@ export const LoginPage = () => {
       setError(null);
       try {
         const role = await signInWithGoogle(response.credential);
-        navigate(role === "super_admin" ? "/super" : "/admin", { replace: true });
+        navigate("/admin/courses", { replace: true });
       } catch (err: any) {
         const msg = err?.message || "";
         if (msg.includes("quyền") || msg.includes("admin") || msg.includes("Admin")) {
