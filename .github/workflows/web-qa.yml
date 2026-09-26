@@ -10,6 +10,7 @@ on:
       - functions/**
       - migrations/**
       - wrangler.toml
+      - .github/workflows/web-qa.yml
   workflow_dispatch:
 
 permissions:
@@ -135,7 +136,7 @@ jobs:
       - name: Verify legacy API fails fast, never 522
         run: |
           set -euo pipefail
-          metrics=$(curl -sS --max-time 8 -o /tmp/legacy.json -w '%{http_code} %{time_total}' https://lexilingo-assistant.pages.dev/api/v1/courses)
+          metrics=$(curl -sS --max-time 8 -o /tmp/legacy.json -w '%{http_code} %{time_total}' https://lexilingo-assistant.pages.dev/api/v1/legacy-disabled-smoke)
           echo "$metrics"
           code=$(echo "$metrics" | awk '{print $1}')
           elapsed=$(echo "$metrics" | awk '{print $2}')
@@ -178,6 +179,7 @@ jobs:
               ['home-mobile', 'https://lexilingo-assistant.pages.dev/', 390, 844],
               ['courses', 'https://lexilingo-assistant.pages.dev/#/courses', 1440, 900],
               ['lexi', 'https://lexilingo-assistant.pages.dev/#/lexi', 1440, 900],
+              ['voice-practice', 'https://lexilingo-assistant.pages.dev/#/voice-practice', 1440, 900],
               ['games', 'https://lexilingo-assistant.pages.dev/#/games', 1440, 900],
               ['today-plan', 'https://lexilingo-assistant.pages.dev/#/today-plan', 1440, 900],
               ['placement-test', 'https://lexilingo-assistant.pages.dev/#/placement-test', 1440, 900],

@@ -11,6 +11,7 @@ on:
       - migrations/**
       - wrangler.toml
       - .github/workflows/cloudflare-pages.yml
+      - .github/workflows/web-qa.yml
   workflow_dispatch:
 
 permissions:
