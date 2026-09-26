@@ -4,3 +4,12 @@ compatibility_date = "2026-09-24"
 
 [ai]
 binding = "AI"
+
+[[d1_databases]]
+binding = "CONTENT_DB"
+database_name = "lexilingo-content"
+database_id = "a3f591a0-248b-4d42-9965-3bbfe7dfde6d"
+
+[vars]
+GOOGLE_CLIENT_ID = "432329288238-co06he7ecljb7ubupm5mj84t3i0r1u7j.apps.googleusercontent.com"
+SUPER_ADMIN_EMAILS = "anhtsizoo00@gmail.com"

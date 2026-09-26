@@ -119,7 +119,4 @@ jobs:
             --project-name=lexilingo-assistant \
             --branch=phase-1-english-assistant \
             --commit-hash="$GITHUB_SHA" \
-            --commit-message="English assistant + admin" \
-            --d1 CONTENT_DB="$D1_DATABASE_ID" \
-            --binding GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
-            --binding SUPER_ADMIN_EMAILS="anhtsizoo00@gmail.com"
+            --commit-message="English assistant + admin"
