@@ -62,7 +62,7 @@ jobs:
           VITE_ENV: production
           VITE_BACKEND_URL: https://lexilingo-assistant.pages.dev/api/v1
           VITE_AI_URL: https://lexilingo-assistant.pages.dev/api/v1
-          VITE_GOOGLE_CLIENT_ID: 432329288238-co06he7ecljb7ubupm5mj84t3i0r1u7j.apps.googleusercontent.com
+          VITE_GOOGLE_CLIENT_ID: 693219123709-s50js39652e6l4ps5l82441jhuncdemr.apps.googleusercontent.com
         run: npm run build:check
 
   live-api-smoke:

@@ -11,5 +11,5 @@ database_name = "lexilingo-content"
 database_id = "a3f591a0-248b-4d42-9965-3bbfe7dfde6d"
 
 [vars]
-GOOGLE_CLIENT_ID = "432329288238-co06he7ecljb7ubupm5mj84t3i0r1u7j.apps.googleusercontent.com"
+GOOGLE_CLIENT_ID = "693219123709-s50js39652e6l4ps5l82441jhuncdemr.apps.googleusercontent.com"
 SUPER_ADMIN_EMAILS = "anhtsizoo00@gmail.com"
