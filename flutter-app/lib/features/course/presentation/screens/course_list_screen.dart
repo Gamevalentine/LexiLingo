@@ -28,16 +28,13 @@ class _CourseListScreenState extends State<CourseListScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
 
-    // Native builds still use the original course backend.
-    // Public web is guest-only, so it uses the local AI learning hub below
-    // and must not call the retired /courses backend.
-    if (!kIsWeb) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final provider = context.read<CourseProvider>();
-        provider.loadCategories();
-        provider.loadCourses();
-      });
-    }
+    // Cloudflare Pages now exposes the public course/content API for web too,
+    // so both web and native can load the course catalogue.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<CourseProvider>();
+      provider.loadCategories();
+      provider.loadCourses();
+    });
   }
 
   @override
@@ -360,20 +357,30 @@ class _CourseListScreenState extends State<CourseListScreen> {
       );
     }
 
+    void openZeroCourse() {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const CourseDetailScreen(
+            courseId: 'course-en-zero-69',
+          ),
+        ),
+      );
+    }
+
     final lessons = <({IconData icon, String title, String subtitle, String prompt})>[
       (
         icon: Icons.school_rounded,
         title: 'Ngữ pháp nền tảng',
         subtitle: 'Học ngữ pháp theo cách dễ hiểu, có ví dụ và bài tập ngắn.',
         prompt:
-            'Hãy dạy tôi một bài ngữ pháp tiếng Anh phù hợp trình độ B1. Giải thích ngắn bằng tiếng Việt, cho ví dụ tiếng Anh và 3 câu luyện tập.',
+            'Hãy dạy tôi một bài ngữ pháp tiếng Anh cho người bắt đầu từ con số 0. Giải thích ngắn bằng tiếng Việt, cho ví dụ tiếng Anh và 3 câu luyện tập.',
       ),
       (
         icon: Icons.forum_rounded,
         title: 'Luyện hội thoại',
         subtitle: 'Nói tiếng Anh theo tình huống thực tế và được sửa ngay khi cần.',
         prompt:
-            'Mình muốn luyện hội thoại tiếng Anh. Hãy bắt đầu nói với mình bằng tiếng Anh ở trình độ B1, mỗi lượt một câu hỏi tự nhiên và sửa lỗi nếu mình nói sai.',
+            'Mình muốn luyện hội thoại tiếng Anh. Hãy bắt đầu nói với mình bằng tiếng Anh ở mức rất cơ bản A0–A1, mỗi lượt một câu hỏi tự nhiên và sửa lỗi nếu mình nói sai.',
       ),
       (
         icon: Icons.fact_check_rounded,
@@ -387,7 +394,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
         title: 'Từ vựng theo chủ đề',
         subtitle: 'Học từ mới có nghĩa, cách dùng và ví dụ thực tế.',
         prompt:
-            'Hãy dạy mình 10 từ vựng tiếng Anh theo một chủ đề thực tế phù hợp B1, kèm nghĩa tiếng Việt và câu ví dụ ngắn.',
+            'Hãy dạy mình 10 từ vựng tiếng Anh theo một chủ đề thực tế phù hợp người mới bắt đầu, kèm nghĩa tiếng Việt và câu ví dụ ngắn.',
       ),
       (
         icon: Icons.mic_rounded,
@@ -401,7 +408,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
         title: 'Bài học hôm nay',
         subtitle: 'Để trợ lý chọn nội dung phù hợp và dẫn bạn học từng bước.',
         prompt:
-            'Hãy tạo cho mình một bài học tiếng Anh khoảng 10 phút hôm nay ở trình độ B1, gồm từ vựng, ngữ pháp và một đoạn hội thoại ngắn.',
+            'Hãy tạo cho mình một bài học tiếng Anh khoảng 10 phút hôm nay ở mức rất cơ bản A0–A1, gồm từ vựng, ngữ pháp và một đoạn hội thoại ngắn.',
       ),
     ];
 
@@ -464,6 +471,97 @@ class _CourseListScreenState extends State<CourseListScreen> {
                 ),
               ),
               const SliverToBoxAdapter(child: _CourseBanner()),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                sliver: SliverToBoxAdapter(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(22),
+                      onTap: openZeroCourse,
+                      child: Container(
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              primaryAccent.withValues(alpha: isDark ? 0.28 : 0.14),
+                              primaryAccent.withValues(alpha: isDark ? 0.12 : 0.05),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: primaryAccent.withValues(alpha: 0.32),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 58,
+                              height: 58,
+                              decoration: BoxDecoration(
+                                color: primaryAccent,
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: Icon(
+                                Icons.auto_stories_rounded,
+                                color: Theme.of(context).colorScheme.surface,
+                                size: 30,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'KHÓA HỌC CỦA BẠN',
+                                    style: TextStyle(
+                                      color: primaryAccent,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    'Tiếng Anh từ con số 0 – 69 bài',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(fontWeight: FontWeight.w900),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    '23 chủ điểm • học theo thứ tự • có giải thích, bài tập, đáp án và lưu tiến độ',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: muted, height: 1.4),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            FilledButton.icon(
+                              onPressed: openZeroCourse,
+                              icon: const Icon(Icons.play_arrow_rounded),
+                              label: const Text('Bắt đầu học'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: primaryAccent,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                 sliver: SliverGrid(
