@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:http/http.dart' as http;
@@ -54,10 +55,34 @@ class _MainScreenState extends State<MainScreen> {
   Widget _getPage(int index) =>
       _pageCache.putIfAbsent(index, () => _buildPage(index));
 
+  int _webIndexFromUrl(int fallback) {
+    if (!kIsWeb) return fallback;
+    final fragment = Uri.base.fragment.split('?').first;
+    if (fragment == '/courses' || fragment.startsWith('/courses/')) return 1;
+    if (fragment == '/lexi') return 2;
+    if (fragment == '/conversation' || fragment == '/stories') return 3;
+    if (fragment == '/' || fragment.isEmpty) return fallback;
+    return fallback;
+  }
+
+  void _syncWebUrlForTab(int index) {
+    if (!kIsWeb) return;
+    const routes = <int, String>{
+      0: '/',
+      1: '/courses',
+      2: '/lexi',
+      3: '/conversation',
+    };
+    final location = routes[index];
+    if (location == null) return;
+    SystemNavigator.routeInformationUpdated(location: location, replace: true);
+  }
+
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex.clamp(0, _pageCount - 1);
+    final requestedIndex = widget.initialIndex.clamp(0, _pageCount - 1);
+    _currentIndex = _webIndexFromUrl(requestedIndex);
     // Only build the initial page; all other pages are deferred.
     _getPage(_currentIndex);
     if (_currentIndex == 2) {
@@ -168,6 +193,7 @@ class _MainScreenState extends State<MainScreen> {
       _getPage(index); // build page lazily on first visit
       _currentIndex = index;
     });
+    _syncWebUrlForTab(index);
   }
 
   Widget _buildNavigationRail(BuildContext context, double width) {
