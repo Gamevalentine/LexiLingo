@@ -8,6 +8,7 @@ import {
   handlePublicContent,
   loadTutorConfig,
 } from "../_shared/content_store.js";
+import { handleLearning } from "../_shared/learning_store.js";
 
 const AI_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
 
@@ -258,6 +259,11 @@ export async function onRequest(context) {
 
   if (rest.startsWith("v1/lexi/")) {
     return handleLexi(context, rest.slice("v1/lexi/".length));
+  }
+
+  if (rest.startsWith("v1/learning/")) {
+    const learning = await handleLearning(context, rest);
+    if (learning) return learning;
   }
 
   const publicContent = await handlePublicContent(context, rest);
