@@ -59,4 +59,8 @@
 
 ## Trạng thái triển khai
 
-Cây khóa học này được seed bằng migration `migrations/0002_seed_english_zero_69.sql`. Mỗi lesson có nguồn tham chiếu nội bộ trong trường `content.source_basis`; phần exercises được để trống để bổ sung nội dung chi tiết ở bước biên soạn bài học.
+- Cây 69 bài được seed bằng `migrations/0002_seed_english_zero_69.sql`.
+- Nội dung thực hành được bổ sung bằng `migrations/0003_english_zero_lesson_content.sql`: 23 chủ điểm, 69 bài, 322 câu/bài tập tương tác.
+- Mỗi lesson lưu `content.source_basis`, phần tóm tắt, quy tắc và bài tập có đáp án/giải thích.
+- Cloudflare Pages Functions đã có các endpoint học bài: bắt đầu bài, tải nội dung, chấm câu trả lời, hoàn thành bài và roadmap tiến độ.
+- Tiến độ học được lưu trong D1 bằng `learning_attempts` và `lesson_progress`.
