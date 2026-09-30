@@ -110,6 +110,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx wrangler@4 d1 execute lexilingo-content --remote --file=migrations/0001_admin_content.sql --yes
+          npx wrangler@4 d1 execute lexilingo-content --remote --file=migrations/0002_seed_english_zero_69.sql --yes
 
       - name: Deploy to Cloudflare Pages
         env:
