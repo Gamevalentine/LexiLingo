@@ -59,7 +59,10 @@ class _MainScreenState extends State<MainScreen> {
     if (!kIsWeb) return fallback;
     final fragment = Uri.base.fragment.split('?').first;
     if (fragment == '/courses' || fragment.startsWith('/courses/')) return 1;
-    if (fragment == '/lexi') return 2;
+    // /lexi is an explicit MaterialApp named route on web. Let Flutter
+    // own that deep link instead of also building Lexi inside the root
+    // MainScreen, otherwise the chat can initialize twice on refresh.
+    if (fragment == '/lexi') return fallback;
     if (fragment == '/conversation' || fragment == '/stories') return 3;
     if (fragment == '/' || fragment.isEmpty) return fallback;
     return fallback;
