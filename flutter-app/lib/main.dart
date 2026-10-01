@@ -404,12 +404,6 @@ class _LexiLingoAppState extends State<LexiLingoApp>
             locale: context.locale,
             supportedLocales: context.supportedLocales,
             localizationsDelegates: context.localizationDelegates,
-            // On web, force Flutter to boot a single root route. The active
-            // sidebar tab is derived from Uri.base.fragment inside MainScreen.
-            // Without this, a deep link such as #/lexi can create BOTH the
-            // home MainScreen and a second named /lexi route, which initializes
-            // two LexiChatPage instances against the same provider.
-            initialRoute: kIsWeb ? '/' : null,
             home: kIsWeb
                 ? const LearnerTheme(child: MainScreen())
                 : const AuthWrapper(),
