@@ -245,6 +245,53 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         const SizedBox(height: 16),
                       ],
 
+                      if (course.id == 'course-en-zero-69') ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          '4 tài liệu nguồn của khóa học',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Các tài liệu bạn đã gửi được gắn trực tiếp với khóa học này để bạn biết bài nào đang dựa trên nguồn nào.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColorRoles.textSecondary(
+                              Theme.of(context).brightness ==
+                                  Brightness.dark,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const _SourceDocumentCard(
+                          title: 'Ngữ pháp Tiếng Anh',
+                          subtitle: 'Nguồn chính cho lộ trình ngữ pháp từ cơ bản đến nâng cao.',
+                          icon: Icons.menu_book_rounded,
+                        ),
+                        const SizedBox(height: 10),
+                        const _SourceDocumentCard(
+                          title: 'Bài tập Tiếng Anh 6 - Tập 1',
+                          subtitle: 'Luyện phát âm, từ vựng, ngữ pháp, nói, đọc và viết cho các chủ điểm đầu.',
+                          icon: Icons.assignment_rounded,
+                        ),
+                        const SizedBox(height: 10),
+                        const _SourceDocumentCard(
+                          title: 'Bài tập Tiếng Anh 6 - Tập 2',
+                          subtitle: 'Tiếp tục luyện Unit 7–12 và các chủ điểm mở rộng ở phần sau khóa học.',
+                          icon: Icons.assignment_turned_in_rounded,
+                        ),
+                        const SizedBox(height: 10),
+                        const _SourceDocumentCard(
+                          title: 'Giải thích ngữ pháp Tiếng Anh - Mai Lan Hương',
+                          subtitle: 'Tài liệu tham khảo bổ sung để giải thích sâu hơn khi cần.',
+                          icon: Icons.library_books_rounded,
+                        ),
+                        const SizedBox(height: 18),
+                      ],
+
                       // Roadmap Header
                       const Divider(),
                       const SizedBox(height: 8),
@@ -437,6 +484,95 @@ class _CourseHeroNetworkImage extends StatelessWidget {
 }
 
 /// Stat Chip Widget
+class _SourceDocumentCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  const _SourceDocumentCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = AppColorRoles.primary(isDark);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.surfaceDarkMuted
+            : primary.withValues(alpha: 0.045),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: primary.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: AppColorRoles.textSecondary(isDark),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.check_circle_rounded,
+                      size: 16,
+                      color: AppColors.greenSuccessBright,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Đã tích hợp vào khóa học',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.greenSuccessBright,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StatChip extends StatelessWidget {
   final IconData icon;
   final String label;
